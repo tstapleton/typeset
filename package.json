@@ -29,14 +29,18 @@
 		"@biomejs/biome": "2.5.0",
 		"@tsconfig/node26": "26.0.0",
 		"@types/node": "25.9.3",
-		"fallow": "3.26.0",
-		"happy-dom": "20.10.6",
+		"fallow": "3.38.1",
+		"happy-dom": "21.0.4",
 		"husky": "9.1.7",
 		"typescript": "6.0.3",
-		"vitest": "3.2.7"
+		"vitest": "5.1.0"
+	},
+	"overrides": {
+		"@ts-morph/common": {
+			"minimatch": "11.0.4"
+		}
 	},
 	"allowScripts": {
-		"esbuild@0.28.2": true,
 		"fsevents@2.3.3": true
 	}
 }
