@@ -5,10 +5,11 @@
 
 import {
 	compareStrings,
+	type DirectoryImports,
+	directoryImports,
 	type ModelGraph,
 	type OutsideUse,
 	outsideUse,
-	topLevelDir,
 } from "./graph.js";
 
 export interface SameName {
@@ -40,15 +41,6 @@ export interface Overlap {
 
 export interface SharedModel extends OutsideUse {
 	model: string;
-}
-
-export interface DirectoryImports {
-	/** A top-level directory of the feature, or the feature root. */
-	directory: string;
-	/** Distinct models used from other top-level directories. */
-	total: number;
-	/** Those models by the top-level directory declaring them, largest group first. */
-	from: Array<{ directory: string; models: string[] }>;
 }
 
 export interface Evidence {
@@ -157,44 +149,6 @@ function mostShared(graph: ModelGraph): SharedModel[] {
 				y.files + y.models - (x.files + x.models) ||
 				y.references - x.references ||
 				compareStrings(x.model, y.model),
-		);
-}
-
-/**
- * Rolled up to top-level directories, so use within one isn't counted. Code in
- * a directory and model declarations in it both count as using a model.
- */
-function directoryImports(graph: ModelGraph): DirectoryImports[] {
-	const homes = new Map(
-		graph.models.map((m) => [m.id, topLevelDir(m.directory)]),
-	);
-	const pairs = [
-		...graph.usages.map((u) => ({
-			user: topLevelDir(u.directory),
-			model: u.model,
-		})),
-		...graph.relations.map((r) => ({
-			user: homes.get(r.from) ?? "",
-			model: r.to,
-		})),
-	].filter(({ user, model }) => homes.get(model) !== user);
-	return [...groupBy(pairs, (p) => p.user).entries()]
-		.map(([directory, used]) => {
-			const models = [...new Set(used.map((p) => p.model))];
-			const from = [...groupBy(models, (m) => homes.get(m) ?? "").entries()]
-				.map(([home, ids]) => ({
-					directory: home,
-					models: ids.sort(compareStrings),
-				}))
-				.sort(
-					(x, y) =>
-						y.models.length - x.models.length ||
-						compareStrings(x.directory, y.directory),
-				);
-			return { directory, total: models.length, from };
-		})
-		.sort(
-			(x, y) => y.total - x.total || compareStrings(x.directory, y.directory),
 		);
 }
 

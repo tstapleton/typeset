@@ -6,8 +6,13 @@ import { afterAll, describe, expect, it } from "vitest";
 import { generate } from "../cli.js";
 import { computeEvidence } from "../evidence.js";
 import { extract } from "../extract/extract.js";
+import {
+	computeDirectoryLayout,
+	lineWidth,
+	renderDirectorySvg,
+} from "./directories.js";
 import { buildHtml } from "./html.js";
-import { computeLayout, type PlacedEdge, type Point } from "./layout.js";
+import { computeLayout, type Point } from "./layout.js";
 import { renderSvg } from "./svg.js";
 
 const FIXTURE = new URL("../../fixtures/feature-app", import.meta.url).pathname;
@@ -17,7 +22,7 @@ const exported = new Map(graph.models.map((m) => [m.id, m.exported]));
 
 type Segment = [Point, Point];
 
-const segments = (e: PlacedEdge): Segment[] =>
+const segments = (e: { points: Point[] }): Segment[] =>
 	e.points.slice(1).map((p, i): Segment => [e.points[i], p]);
 
 /** Length two orthogonal segments share when they lie on the same line. */
@@ -144,12 +149,84 @@ describe("layout and SVG", async () => {
 	});
 });
 
+describe("directory view", async () => {
+	const layout = await computeDirectoryLayout(graph);
+	const doc = new new Window().DOMParser().parseFromString(
+		renderDirectorySvg(layout),
+		"image/svg+xml",
+	);
+	const line = (from: string, to: string) =>
+		layout.lines.find((l) => l.from === from && l.to === to);
+
+	it("draws one box per top-level directory with its counts", () => {
+		expect(
+			layout.boxes.map((b) => [b.id, b.defined, b.shared, b.used]),
+		).toEqual([
+			["dir:", 5, 5, 1],
+			["dir:customers", 3, 1, 0],
+			["dir:data-access", 3, 0, 4],
+			["dir:order-detail", 3, 0, 3],
+		]);
+		const texts = [
+			...doc.querySelectorAll('[data-dir="dir:customers"] .dir-box-count'),
+		].map((t) => t.textContent);
+		expect(texts).toEqual([
+			"3 models defined",
+			"1 model shared",
+			"0 external models used",
+		]);
+		expect(doc.querySelectorAll(".dir-box").length).toBe(layout.boxes.length);
+	});
+
+	it("draws one line per direction, labelled with its distinct models", () => {
+		expect(layout.lines.map((l) => [l.from, l.to, l.models]).sort()).toEqual(
+			[
+				["dir:", "dir:customers", 1],
+				["dir:data-access", "dir:", 3],
+				["dir:data-access", "dir:customers", 1],
+				["dir:order-detail", "dir:", 3],
+			].sort(),
+		);
+		for (const l of layout.lines)
+			expect(l.points.length, l.id).toBeGreaterThanOrEqual(2);
+		const counts = [...doc.querySelectorAll(".dir-line-count")].map(
+			(t) => t.textContent,
+		);
+		expect(counts.sort()).toEqual(["1", "1", "3", "3"]);
+	});
+
+	it("widens lines with the model count on a fixed, capped scale", () => {
+		expect(lineWidth(1)).toBe(1.5);
+		expect(lineWidth(25)).toBe(7.5);
+		expect(lineWidth(25)).toBeGreaterThan(lineWidth(1));
+		expect(lineWidth(1000)).toBe(12);
+		expect(line("dir:data-access", "dir:")?.width).toBe(lineWidth(3));
+	});
+
+	it("never overlaps two lines", () => {
+		const overlaps = layout.lines.flatMap((a, i) =>
+			layout.lines.slice(i + 1).flatMap((b) => {
+				const shared = segments(a).flatMap((s) =>
+					segments(b).map((t) => collinearOverlap(s, t)),
+				);
+				return shared.some((length) => length > 0) ? [`${a.id} | ${b.id}`] : [];
+			}),
+		);
+		expect(overlaps).toEqual([]);
+	});
+});
+
 describe("index.html", async () => {
 	const layout = await computeLayout(graph);
 	const evidence = computeEvidence(graph);
 
 	it("inlines the SVG and data with no placeholders left", async () => {
-		const html = await buildHtml(graph, evidence, renderSvg(layout, exported));
+		const html = await buildHtml(
+			graph,
+			evidence,
+			renderSvg(layout, exported),
+			"",
+		);
 		expect(html).not.toMatch(/__TYPESET_\w+__/);
 		const json = html.match(/const DATA = (.*);\n/)?.[1];
 		expect(JSON.parse(json ?? "null").graph).toEqual(graph);
@@ -159,7 +236,12 @@ describe("index.html", async () => {
 	it("cannot be broken out of by source text containing </script>", async () => {
 		const evil = structuredClone(graph);
 		evil.models[0].source = "/** </script><script>alert(1)</script> $& */";
-		const html = await buildHtml(evil, evidence, renderSvg(layout, exported));
+		const html = await buildHtml(
+			evil,
+			evidence,
+			renderSvg(layout, exported),
+			"",
+		);
 		expect(html.split("</script>").length).toBe(2);
 		expect(html).toContain("$&");
 	});
@@ -177,5 +259,12 @@ describe("generate", () => {
 				readFileSync(path.join(out, "b", f), "utf8"),
 			);
 		}
+	});
+
+	it("embeds the directory view in index.html but not in diagram.svg", () => {
+		const read = (f: string) => readFileSync(path.join(out, "a", f), "utf8");
+		expect(read("index.html")).toMatch(/id="dir-canvas" hidden><svg /);
+		expect(read("index.html")).toContain('class="dir-box"');
+		expect(read("diagram.svg")).not.toContain('class="dir-box"');
 	});
 });

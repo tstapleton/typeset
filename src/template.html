@@ -41,8 +41,12 @@
   #detail ul { list-style: none; display: flex; flex-direction: column; gap: 3px; }
   #diagram-area { flex: 1; position: relative; overflow: hidden; background: var(--bg); cursor: grab; }
   #diagram-area.panning { cursor: grabbing; }
-  #canvas { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
+  #canvas, #dir-canvas { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
   #zoom { position: absolute; right: 12px; top: 12px; display: flex; gap: 4px; z-index: 2; }
+  #views { position: absolute; left: 12px; top: 12px; display: flex; gap: 4px; z-index: 2; }
+  #views button { padding: 4px 10px; font-size: 11px; border-radius: 4px; border: 1px solid var(--border); background: var(--surface); color: var(--dim); cursor: pointer; }
+  #views button.active { color: var(--text); border-color: var(--accent); }
+  .card[hidden] { display: none; }
   #zoom button { padding: 4px 10px; font-size: 11px; border-radius: 4px; border: 1px solid var(--border); background: var(--surface); color: var(--text); cursor: pointer; }
   .card.model, .card.files { cursor: pointer; }
   svg .card.match .card-outline { stroke: var(--warn); stroke-width: 2; }
@@ -53,6 +57,7 @@
   svg.focus .card:not(.on), svg.focus .edge:not(.on) { opacity: .14; }
   svg.hide-property .e-property, svg.hide-extends .e-extends, svg.hide-usage .e-usage { display: none; }
   svg.hide-usage .card.files { display: none; }
+  svg.focus .dir-box:not(.on), svg.focus .dir-line:not(.on) { opacity: .18; }
 </style>
 </head>
 <body>
@@ -74,7 +79,11 @@
     <input type="search" id="search" placeholder="Model or property name" autocomplete="off" />
     <div class="dim" id="search-result" style="font-size:11px"></div>
   </div>
-  <div class="card">
+  <div class="card" id="dir-legend" hidden>
+    <h2>Directories</h2>
+    <p class="dim" style="font-size:11px">One box per directory directly below the feature. A line means the code or models in one directory use models declared in another. Its number and thickness show how many distinct models. In each box, <em>defined</em> counts the models declared there, <em>shared</em> counts those used from another directory, and <em>external models used</em> counts the models it uses from other directories. Click a line or box for the list.</p>
+  </div>
+  <div class="card" id="connections">
     <h2>Connections</h2>
     <label class="toggle"><input type="checkbox" data-edge="property" checked /><span class="swatch-line" style="border-color:#60a5fa"></span>Property or type alias references a model</label>
     <label class="toggle"><input type="checkbox" data-edge="extends" checked /><span class="swatch-line" style="border-color:#c084fc;border-top-width:3px"></span>Interface extends a model</label>
@@ -88,8 +97,10 @@
   </div>
 </div>
 <div id="diagram-area">
+  <div id="views"><button type="button" data-view="models" class="active">Models</button><button type="button" data-view="directories">Directories</button></div>
   <div id="zoom"><button type="button" id="zoom-out">−</button><button type="button" id="zoom-in">+</button><button type="button" id="zoom-fit">Fit</button><button type="button" id="zoom-1">100%</button></div>
   <div id="canvas">__TYPESET_SVG__</div>
+  <div id="dir-canvas" hidden>__TYPESET_DIRECTORIES__</div>
 </div>
 <script>
 const DATA = __TYPESET_DATA__;
@@ -113,10 +124,10 @@ $('#meta-usages').textContent = graph.usages.length;
 
 // ─── Pan & zoom ──────────────────────────────────────────────────────────────
 const area = $('#diagram-area');
-const canvas = $('#canvas');
+let canvas = $('#canvas');
 let view = { x: 0, y: 0, k: 1 };
 const apply = () => { canvas.style.transform = `translate(${view.x}px,${view.y}px) scale(${view.k})`; };
-const svgW = +svg.getAttribute('width'), svgH = +svg.getAttribute('height');
+let svgW = +svg.getAttribute('width'), svgH = +svg.getAttribute('height');
 function fitView() {
   const r = area.getBoundingClientRect();
   const k = Math.min(1, (r.width - 24) / svgW, (r.height - 24) / svgH);
@@ -137,7 +148,7 @@ area.addEventListener('wheel', (e) => {
   else { view.x -= e.deltaX; view.y -= e.deltaY; apply(); }
 }, { passive: false });
 let drag = null;
-area.addEventListener('pointerdown', (e) => { if (e.button !== 0 || e.target.closest('#zoom')) return; drag = { x: e.clientX, y: e.clientY, vx: view.x, vy: view.y, moved: false }; });
+area.addEventListener('pointerdown', (e) => { if (e.button !== 0 || e.target.closest('#zoom, #views')) return; drag = { x: e.clientX, y: e.clientY, vx: view.x, vy: view.y, moved: false }; });
 window.addEventListener('pointermove', (e) => {
   if (!drag) return;
   const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
@@ -180,7 +191,7 @@ function select(id, { scroll = true } = {}) {
   for (const c of $$('.card.selected', svg)) c.classList.remove('selected');
   selected = id;
   const detail = $('#detail');
-  if (!id) { detail.hidden = true; focusOn(null); history.replaceState(null, '', location.pathname + location.search); return; }
+  if (!id) { selectDirectoryItem(null); detail.hidden = true; focusOn(null); history.replaceState(null, '', location.pathname + location.search + (currentView === 'directories' ? '#directories' : '')); return; }
   const card = svg.querySelector(`.card[data-id="${CSS.escape(id)}"]`);
   card?.classList.add('selected');
   focusOn([id]);
@@ -235,10 +246,102 @@ svg.addEventListener('mouseover', (e) => {
 svg.addEventListener('mouseleave', () => { if (!selected) focusOn(null); });
 document.addEventListener('click', (e) => {
   const go = e.target.closest('[data-goto]');
-  if (go) { e.preventDefault(); select(go.dataset.goto, { scroll: false }); reveal(go.dataset.goto); }
+  if (go) { e.preventDefault(); setView('models'); select(go.dataset.goto, { scroll: false }); reveal(go.dataset.goto); }
   if (e.target.closest('[data-clear]')) select(null);
 });
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape') select(null); });
+
+// ─── Directory view ──────────────────────────────────────────────
+const dirSvg = $('#dir-canvas svg');
+const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
+const dirLines = evidence.directoryImports.flatMap((d) => d.from.map((f) => ({ from: d.directory, to: f.directory, models: f.models })));
+const dirLink = (id) => `<a class="link mono" data-dir-goto="${esc(id)}">${esc(dirLabel(id))}</a>`;
+function focusDirectories(boxes, lines) {
+  for (const el of $$('.on', dirSvg)) el.classList.remove('on');
+  dirSvg.classList.toggle('focus', !!boxes);
+  if (!boxes) return;
+  for (const b of $$('.dir-box', dirSvg)) if (boxes.has(b.dataset.dir)) b.classList.add('on');
+  for (const l of $$('.dir-line', dirSvg)) if (lines(l)) l.classList.add('on');
+}
+function focusBox(id) {
+  const ends = new Set([id]);
+  for (const l of dirLines) if (l.from === id || l.to === id) { ends.add(l.from); ends.add(l.to); }
+  focusDirectories(ends, (l) => l.dataset.from === id || l.dataset.to === id);
+}
+function focusLine(from, to) {
+  focusDirectories(new Set([from, to]), (l) => l.dataset.from === from && l.dataset.to === to);
+}
+function renderLineDetail(from, to) {
+  const line = dirLines.find((l) => l.from === from && l.to === to);
+  $('#detail').innerHTML = `
+    <h2>${dirLink(from)} uses ${plural(line.models.length, 'model')} from ${dirLink(to)}</h2>
+    <ul>${line.models.map((m) => `<li>${modelLink(m)}</li>`).join('')}</ul>
+    <p><a class="link" data-clear>Clear selection</a></p>`;
+}
+function renderBoxDetail(id) {
+  const out = dirLines.filter((l) => l.from === id).sort((a, b) => b.models.length - a.models.length);
+  const inc = dirLines.filter((l) => l.to === id).sort((a, b) => b.models.length - a.models.length);
+  const item = (other, line) => `<li><a class="link" data-line-from="${esc(line.from)}" data-line-to="${esc(line.to)}">${plural(line.models.length, 'model')}</a> <span class="dim">${line.from === id ? 'from' : 'used by'}</span> <span class="mono">${esc(dirLabel(other))}</span></li>`;
+  $('#detail').innerHTML = `
+    <h2>${esc(dirLabel(id))}</h2>
+    <h3>Uses (${out.length})</h3><ul>${out.map((l) => item(l.to, l)).join('') || '<li class="dim">none</li>'}</ul>
+    <h3>Used by (${inc.length})</h3><ul>${inc.map((l) => item(l.from, l)).join('') || '<li class="dim">none</li>'}</ul>
+    <p><a class="link" data-clear>Clear selection</a></p>`;
+}
+let dirSelected = false;
+function selectDirectoryItem(item) {
+  dirSelected = !!item;
+  if (!item) { focusDirectories(null); return; }
+  if (item.box) { focusBox(item.box); renderBoxDetail(item.box); }
+  else { focusLine(item.from, item.to); renderLineDetail(item.from, item.to); }
+  $('#detail').hidden = false;
+}
+dirSvg.addEventListener('click', (e) => {
+  if (drag?.moved) return;
+  const box = e.target.closest('.dir-box');
+  const line = e.target.closest('.dir-line');
+  if (box) selectDirectoryItem({ box: box.dataset.dir });
+  else if (line) selectDirectoryItem({ from: line.dataset.from, to: line.dataset.to });
+  else select(null);
+});
+dirSvg.addEventListener('mouseover', (e) => {
+  if (dirSelected) return;
+  const box = e.target.closest('.dir-box');
+  const line = e.target.closest('.dir-line');
+  if (box) focusBox(box.dataset.dir);
+  else if (line) focusLine(line.dataset.from, line.dataset.to);
+  else focusDirectories(null);
+});
+dirSvg.addEventListener('mouseleave', () => { if (!dirSelected) focusDirectories(null); });
+document.addEventListener('click', (e) => {
+  const dir = e.target.closest('[data-dir-goto]');
+  if (dir) selectDirectoryItem({ box: dir.dataset.dirGoto });
+  const line = e.target.closest('[data-line-from]');
+  if (line) selectDirectoryItem({ from: line.dataset.lineFrom, to: line.dataset.lineTo });
+});
+
+// ─── Views ─────────────────────────────────────────────────────
+const views = {
+  models: { canvas: $('#canvas'), svg, saved: null },
+  directories: { canvas: $('#dir-canvas'), svg: dirSvg, saved: null },
+};
+let currentView = 'models';
+function setView(name) {
+  if (name === currentView) return;
+  views[currentView].saved = view;
+  currentView = name;
+  select(null);
+  const next = views[name];
+  for (const [key, v] of Object.entries(views)) v.canvas.hidden = key !== name;
+  for (const b of $$('#views button')) b.classList.toggle('active', b.dataset.view === name);
+  $('#connections').hidden = name !== 'models';
+  $('#dir-legend').hidden = name !== 'directories';
+  canvas = next.canvas;
+  svgW = +next.svg.getAttribute('width');
+  svgH = +next.svg.getAttribute('height');
+  if (next.saved) { view = next.saved; apply(); } else fitView();
+}
+for (const b of $$('#views button')) b.addEventListener('click', () => setView(b.dataset.view));
 
 // ─── Search ──────────────────────────────────────────────────────────────────
 $('#search').addEventListener('input', (e) => {
@@ -257,7 +360,6 @@ function section(title, items, render, open = false) {
   el.innerHTML = `<summary>${esc(title)} <span class="count">(${items.length})</span></summary><ul class="ev-list">${items.map(render).join('') || '<li class="dim">none</li>'}</ul>`;
   $('#evidence').appendChild(el);
 }
-const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
 section('Most shared models', evidence.mostShared, (s) => `<li>${modelLink(s.model)}<br><span class="dim">used in ${s.directories.length === 1 ? '1 other top-level directory' : `${s.directories.length} other top-level directories`}: ${plural(s.files, 'file')} · ${plural(s.references, 'reference')} · ${plural(s.models, 'model')}</span><br><span class="dim mono">${s.directories.map((d) => esc(dirLabel(d))).join(', ')}</span></li>`, true);
 section('Models used across top-level directories', evidence.directoryImports, (d) => `<li><code>${esc(dirLabel(d.directory))}</code> uses ${plural(d.total, 'model')}${d.from.map((f) => `<br><span class="dim">${f.models.length} from <code>${esc(dirLabel(f.directory))}</code>:</span> ${f.models.map(modelLink).join(', ')}`).join('')}</li>`, true);
 section('Same name, different files', evidence.sameName, (s) => `<li><code>${esc(s.name)}</code>: ${s.models.map((id) => `${modelLink(id)} <span class="dim mono">${esc(modelById.get(id).file)}</span>`).join('<br>')}</li>`, true);
@@ -269,7 +371,8 @@ section('Not referenced inside the feature', evidence.unreferenced, (id) => `<li
 fitView();
 window.addEventListener('resize', () => { if (!selected) fitView(); });
 const initial = decodeURIComponent(location.hash.slice(1));
-if (initial && (modelById.has(initial) || initial.startsWith('files:'))) { select(initial, { scroll: false }); reveal(initial); }
+if (initial === 'directories') setView('directories');
+else if (initial && (modelById.has(initial) || initial.startsWith('files:'))) { select(initial, { scroll: false }); reveal(initial); }
 </script>
 </body>
 </html>

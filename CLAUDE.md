@@ -25,6 +25,7 @@ cards grouped by directory, model → model references, and code → model usage
 
 - `src/extract/`: the only code that touches TypeScript. Produces a `ModelGraph`.
 - `src/render/`: reads `ModelGraph` only; never imports from `src/extract/`.
+- `src/render/directories.ts`: the directory view's layout and SVG.
 - `src/evidence.ts`: pure facts derived from the graph. No recommendations, no scores.
 - `src/template.html`: the page; `src/render/html.ts` inlines the SVG and JSON into it.
 - `fixtures/feature-app/`: the test feature (`src/app/features/orders`). Formatted with

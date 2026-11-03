@@ -9,7 +9,7 @@ import {
 } from "./cards.js";
 import type { Layout, PlacedEdge, Point } from "./layout.js";
 
-function esc(s: string): string {
+export function esc(s: string): string {
 	return s
 		.replace(/&/g, "&amp;")
 		.replace(/</g, "&lt;")
@@ -136,7 +136,7 @@ function filesCardSvg(card: Layout["files"][number]): string {
 	);
 }
 
-function pathD(points: Point[]): string {
+export function pathD(points: Point[]): string {
 	if (points.length === 0) return "";
 	const r = 6;
 	let d = `M${points[0].x} ${points[0].y}`;

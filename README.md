@@ -62,6 +62,17 @@ module specifier (`@angular/core`) instead of a resolved declaration.
 
 ## Reading the diagram
 
+The **Models** view shows every model. The **Directories** view collapses each directory
+directly below the feature into one box, so you see only the connections between them:
+
+- A line means the code or models in one directory use models declared in another, with
+  one line per direction. Its number and thickness show how many distinct models.
+- Each box counts the models **defined** there (subdirectories included), those **shared**
+  with other top-level directories, and the **external models used** from them.
+- Click a line to list those models, or a box to see everything it uses and what uses it.
+
+In the Models view:
+
 - Directory boxes nest the way the folders do. Models at the feature root sit directly in
   the outer box.
 - A dashed card outline means the model isn't exported.

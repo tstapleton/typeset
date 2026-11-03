@@ -5,6 +5,10 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { computeEvidence } from "./evidence.js";
 import { extract } from "./extract/extract.js";
+import {
+	computeDirectoryLayout,
+	renderDirectorySvg,
+} from "./render/directories.js";
 import { buildHtml } from "./render/html.js";
 import { computeLayout } from "./render/layout.js";
 import { renderSvg } from "./render/svg.js";
@@ -97,7 +101,10 @@ export async function generate(
 		layout,
 		new Map(graph.models.map((m) => [m.id, m.exported])),
 	);
-	const html = await buildHtml(graph, evidence, svg);
+	const directoriesSvg = renderDirectorySvg(
+		await computeDirectoryLayout(graph),
+	);
+	const html = await buildHtml(graph, evidence, svg, directoriesSvg);
 
 	await mkdir(options.outDir, { recursive: true });
 	const out = (name: string): string => path.join(options.outDir, name);

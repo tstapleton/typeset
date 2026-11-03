@@ -240,3 +240,50 @@ export function outsideUse(graph: ModelGraph): Map<string, OutsideUse> {
 	}
 	return out;
 }
+
+export interface DirectoryImports {
+	/** A top-level directory of the feature, or the feature root. */
+	directory: string;
+	/** Distinct models used from other top-level directories. */
+	total: number;
+	/** Those models by the top-level directory declaring them, largest group first. */
+	from: Array<{ directory: string; models: string[] }>;
+}
+
+/**
+ * Rolled up to top-level directories, so use within one isn't counted. Code in
+ * a directory and model declarations in it both count as using a model.
+ */
+export function directoryImports(graph: ModelGraph): DirectoryImports[] {
+	const homes = new Map(
+		graph.models.map((m) => [m.id, topLevelDir(m.directory)]),
+	);
+	const used = new Map<string, Map<string, Set<string>>>();
+	const add = (user: string, model: string): void => {
+		const home = homes.get(model);
+		if (home === undefined || home === user) return;
+		const from = used.get(user) ?? new Map<string, Set<string>>();
+		from.set(home, (from.get(home) ?? new Set<string>()).add(model));
+		used.set(user, from);
+	};
+	for (const u of graph.usages) add(topLevelDir(u.directory), u.model);
+	for (const r of graph.relations) add(homes.get(r.from) ?? "", r.to);
+	return [...used.entries()]
+		.map(([directory, from]) => {
+			const groups = [...from.entries()]
+				.map(([home, models]) => ({
+					directory: home,
+					models: [...models].sort(compareStrings),
+				}))
+				.sort(
+					(x, y) =>
+						y.models.length - x.models.length ||
+						compareStrings(x.directory, y.directory),
+				);
+			const total = groups.reduce((sum, g) => sum + g.models.length, 0);
+			return { directory, total, from: groups };
+		})
+		.sort(
+			(x, y) => y.total - x.total || compareStrings(x.directory, y.directory),
+		);
+}

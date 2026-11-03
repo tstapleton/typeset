@@ -93,6 +93,12 @@ Layout specifics:
 - Text width is estimated from a monospace advance width of 7.2px at 12px. Rows over 64
   characters are truncated with `…`; the full text is in the tooltip and detail panel.
 
+The directory view (`src/render/directories.ts`) is a second layout computed in Node and
+inlined as its own SVG, so the page still needs no layout engine. Line counts come from
+`directoryImports`, the function behind the evidence panel. Line width is on a fixed scale
+(`1.5 × √models`, capped at 12), so widths compare across diagrams; a scale relative to the
+busiest line wouldn't. It's limited to top-level directories.
+
 ## Known limitations / next steps
 
 - **No base-vs-PR diff yet.** Next: run `extract` on both checkouts and diff the graphs
@@ -104,8 +110,8 @@ Layout specifics:
   but unused model doesn't count. Namespace imports (`models.Order`) and barrels resolve
   to the real declaration.
 - Large features (`birdseed/src/app`: 36 models, 67 usages) are readable when zoomed in
-  but busy at "Fit". Collapsing directories would need a re-layout per state; turning
-  off usage edges is the current lever.
+  but busy at "Fit". The directory view is one way out; collapsing individual directories
+  in the Models view would need a re-layout per state.
 - No PR comment yet; the action writes a job summary with the artifact link.
 
 ## Test app: birdseed

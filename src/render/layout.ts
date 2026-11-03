@@ -18,7 +18,9 @@ import {
 } from "./cards.js";
 
 const require = createRequire(import.meta.url);
-const ElkClass = require("elkjs/lib/elk.bundled.js") as { new (): ElkInstance };
+export const ElkClass = require("elkjs/lib/elk.bundled.js") as {
+	new (): ElkInstance;
+};
 
 export interface Point {
 	x: number;
