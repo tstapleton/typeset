@@ -58,12 +58,6 @@ describe("computeEvidence", () => {
 		]);
 	});
 
-	it("lists pairs sharing two or more property names, flagging differing types", () => {
-		expect(computeEvidence(graph([a, b, c])).overlaps).toEqual([
-			{ a: a.id, b: b.id, shared: ["city", "zip"], typeDiffers: ["zip"] },
-		]);
-	});
-
 	it("lists property names declared by several models with their distinct type count", () => {
 		const shared = computeEvidence(graph([a, b, c])).sharedProperties;
 		expect(
@@ -71,6 +65,21 @@ describe("computeEvidence", () => {
 		).toEqual([
 			["city", 2, 1],
 			["zip", 2, 2],
+		]);
+	});
+
+	it("lists property names with different types, grouping models by type", () => {
+		const d = model("d.ts", "Other", [prop("zip", "number")]);
+		expect(
+			computeEvidence(graph([a, b, c, d])).propertyTypeDifferences,
+		).toEqual([
+			{
+				name: "zip",
+				types: [
+					{ type: "number", models: [b.id, d.id] },
+					{ type: "string", models: [a.id] },
+				],
+			},
 		]);
 	});
 
@@ -186,6 +195,95 @@ describe("computeEvidence", () => {
 					{ model: user.id, member: "two" },
 				],
 				users: 2,
+			},
+		]);
+	});
+
+	it("separates models used only elsewhere from those used more outside than at home", () => {
+		const only = inDir(model("h/o.ts", "Only", []), "dir:h");
+		const more = inDir(model("h/m.ts", "More", []), "dir:h");
+		const even = inDir(model("h/e.ts", "Even", []), "dir:h/sub");
+		const unused = inDir(model("h/u.ts", "Unused", []), "dir:h");
+		const local = inDir(model("h/sub/l.ts", "Local", []), "dir:h/sub");
+		const g = graph([only, more, even, unused, local], {
+			relations: [
+				relation(only, only, "self"),
+				relation(local, more, "fromSubdirectory"),
+				relation(local, even, "fromSameRollup"),
+			],
+			usages: [
+				usage(only, "dir:x/deep", ["x/deep/1.ts", "x/deep/2.ts"], 2),
+				usage(only, "dir:y", ["y/1.ts"], 1),
+				usage(more, "dir:x", ["x/1.ts"], 3),
+				usage(even, "dir:x", ["x/1.ts"], 1),
+			],
+		});
+		const evidence = computeEvidence(g);
+		expect(evidence.usedOnlyElsewhere).toEqual([
+			{
+				model: only.id,
+				home: 0,
+				outside: 5,
+				by: [
+					{ directory: "dir:x", uses: 4 },
+					{ directory: "dir:y", uses: 1 },
+				],
+			},
+		]);
+		expect(evidence.usedMoreOutside).toEqual([
+			{
+				model: more.id,
+				home: 1,
+				outside: 3,
+				by: [{ directory: "dir:x", uses: 3 }],
+			},
+		]);
+	});
+
+	it("lists pairs of top-level directories using each other, only when both do", () => {
+		const inA = inDir(model("a/a.ts", "InA", []), "dir:a");
+		const inB = inDir(model("b/x/b.ts", "InB", []), "dir:b/x");
+		const inC = inDir(model("c/c.ts", "InC", []), "dir:c");
+		const g = graph([inA, inB, inC], {
+			relations: [relation(inA, inB, "toB")],
+			usages: [
+				usage(inA, "dir:b", ["b/1.ts"]),
+				usage(inC, "dir:a", ["a/1.ts"]),
+			],
+		});
+		expect(computeEvidence(g).twoWayDirectories).toEqual([
+			{ a: "dir:a", b: "dir:b", aUses: [inB.id], bUses: [inA.id] },
+		]);
+	});
+
+	it("lists models held under different property names, skipping methods", () => {
+		const target = model("t.ts", "MyType", []);
+		const same = model("s.ts", "Same", []);
+		const holderA = model("a2.ts", "HolderA", [
+			prop("bar", "MyType"),
+			prop("same", "Same"),
+		]);
+		const holderB = model("b2.ts", "HolderB", [
+			prop("baz", "MyType"),
+			prop("same", "Same"),
+			{ ...prop("run", "(x: MyType) => void"), kind: "method" },
+		]);
+		const g = graph([target, same, holderA, holderB], {
+			relations: [
+				relation(holderA, target, "bar"),
+				relation(holderB, target, "baz"),
+				relation(holderB, target, "run"),
+				relation(holderA, same, "same"),
+				relation(holderB, same, "same"),
+			],
+		});
+		expect(computeEvidence(g).propertyNameDifferences).toEqual([
+			{
+				model: target.id,
+				names: [
+					{ name: "bar", models: [holderA.id] },
+					{ name: "baz", models: [holderB.id] },
+				],
 			},
 		]);
 	});

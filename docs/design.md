@@ -19,8 +19,9 @@ extract (ts-morph)  →  graph.json  →  evidence  →  layout (elkjs)  →  SV
 - **Rendering** (`src/render/`) only reads the `ModelGraph` type. It never imports from
   `src/extract/` (`compareStrings` lives in `graph.ts` for that reason).
 - **Evidence** (`src/evidence.ts`) is a pure function of the graph: repeated names,
-  shared property names, overlapping models, unreferenced models, most shared models and
-  the models each top-level directory uses from the others. It is computed at
+  shared property names, unreferenced models, most shared models, the models each top-level
+  directory uses from the others, models used mostly or only outside their directory, pairs
+  of directories using each other, and differences in property types and names. It is computed at
   render time and isn't stored in `graph.json`, so the graph stays a record of the code
   alone.
 
@@ -127,9 +128,9 @@ state and form types (`RecipesState`, `RecipeForm`, …) that reference core mod
 single feature such as `features/recipes` gives a small diagram: 9 models, 3 internal
 references, and the core types shown as outside names. Running on `src/app` gives the
 interesting cross-directory picture: core models, feature state referencing them, and
-usage from every feature. The evidence panel surfaces genuine overlaps there: `Recipe`
-vs `RecipeForm` declare `servings`, `tags`, `cookMinutes` and `prepMinutes` with
-different types, and `Ingredient` vs `IngredientRow` differ in `quantity` and `unit`.
+usage from every feature. The evidence panel surfaces genuine differences there: `servings`,
+`tags`, `cookMinutes` and `prepMinutes` have different types in `Recipe` and `RecipeForm`, and
+`quantity` and `unit` differ between `Ingredient` and `IngredientRow`.
 
 The bundled fixture (`fixtures/feature-app`) covers what birdseed doesn't: nested
 subdirectories, models at the feature root, barrels, namespace imports, generics, enums,

@@ -94,11 +94,15 @@ In the Models view:
   outside the model set.
 - Hover or click a card to highlight its connections; the side panel shows its source,
   what it references, what references it, and every file that uses it.
-- The **Evidence** panel lists facts for comparison: the most shared models, how many models
-  each top-level directory uses from each other one, models with the same name, pairs of
-  models declaring two or more of the same property names (`≠` marks a name declared with
-  different types), property names that appear in several models, and models nothing in
-  the feature references.
+- The **Evidence** panel lists facts for comparison and draws no conclusions from them:
+  - the most shared models, and how many models each top-level directory uses from the others
+  - models used only from other directories, or more from outside than at home, counting
+    code and model references, with subdirectories rolled up into their top-level directory
+  - pairs of directories using each other
+  - property names declared with different types, and models held under different property
+    names
+  - models with the same name, property names that appear in several models (`≠` marks a name
+    declared with different types), and models nothing in the feature references
 - Pan by dragging or scrolling; zoom with ⌘/ctrl + scroll or the buttons. The URL hash
   records the selection, so a link can point at a model.
 
