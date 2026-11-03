@@ -16,7 +16,6 @@ export const PAD_X = 10;
 const MIN_CARD_W = 180;
 /** Rows longer than this are truncated with an ellipsis; the full text is in a tooltip and the detail panel. */
 export const MAX_ROW_CHARS = 64;
-const HEADER_CHARS = 12; // room for the kind badge next to the name
 
 export type RowKind = "extends" | "alias" | "member";
 
@@ -39,7 +38,6 @@ export interface CardRow {
 export interface ModelCard {
 	id: string;
 	title: string;
-	kind: Model["kind"];
 	subtitle: string;
 	rows: CardRow[];
 	width: number;
@@ -151,14 +149,13 @@ export function modelCard(model: Model): ModelCard {
 	const title = params ? `${model.name}<${params}>` : model.name;
 	const subtitle = basename(model.file);
 	const longest = Math.max(
-		title.length + HEADER_CHARS,
+		title.length,
 		subtitle.length,
 		...rows.map((r) => Math.min(MAX_ROW_CHARS, rowText(r).length)),
 	);
 	return {
 		id: model.id,
 		title,
-		kind: model.kind,
 		subtitle,
 		rows,
 		width: Math.max(MIN_CARD_W, Math.ceil(longest * CHAR_W + PAD_X * 2)),

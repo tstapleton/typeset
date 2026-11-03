@@ -60,16 +60,32 @@ const MARGIN = 16;
 
 const portId = (card: string, name: string): string => `${card}::${name}`;
 
-function modelPorts(card: ModelCard, rowsWithRefs: Set<number>): ElkPort[] {
+const IN_PORT_INSET = 10;
+const IN_PORT_STEP = 10;
+const inPortId = (card: string, edge: string): string =>
+	portId(card, `in:${edge}`);
+
+/** Y offset of an incoming port: stacked from the top, tightening to fit short cards. */
+function inPortY(index: number, count: number, cardHeight: number): number {
+	if (count === 1) return rowCenterY(-1);
+	const room = (cardHeight - 2 * IN_PORT_INSET) / (count - 1);
+	return IN_PORT_INSET + index * Math.min(IN_PORT_STEP, room);
+}
+
+function modelPorts(
+	card: ModelCard,
+	rowsWithRefs: Set<number>,
+	incoming: string[],
+): ElkPort[] {
 	const ports: ElkPort[] = [
-		{
-			id: portId(card.id, "in"),
+		...incoming.map((edge, i) => ({
+			id: inPortId(card.id, edge),
 			x: 0,
-			y: rowCenterY(-1),
+			y: inPortY(i, incoming.length, card.height),
 			width: 0,
 			height: 0,
 			layoutOptions: { "elk.port.side": "WEST" },
-		},
+		})),
 		{
 			id: portId(card.id, "use"),
 			x: card.width,
@@ -107,13 +123,26 @@ interface Cards {
  * Relation edges leave from the row holding the reference; usage edges point
  * from a directory's code to the model it uses, so every edge runs
  * dependent → dependency and the layered layout reads left to right.
- * Returns the edges and, per model, the rows that need an outgoing port.
+ * Every edge gets its own port on the target, because ELK merges edges sharing
+ * a port into one trunk that hides which edge goes where. A model's incoming
+ * ports are ordered by `sourceY` so edges arrive without swapping places.
+ * Returns the edges and, per model, the rows that need an outgoing port and
+ * the incoming edges in port order.
  */
 function layoutEdges(
 	graph: ModelGraph,
 	cards: Cards,
-): { edges: LayoutEdgeInput[]; rowsWithRefs: Map<string, Set<number>> } {
+	sourceY: ReadonlyMap<string, number>,
+): {
+	edges: LayoutEdgeInput[];
+	rowsWithRefs: Map<string, Set<number>>;
+	incoming: Map<string, string[]>;
+} {
 	const rowsWithRefs = new Map<string, Set<number>>();
+	const incoming = new Map<string, string[]>();
+	const addIncoming = (model: string, edge: string): void => {
+		incoming.set(model, [...(incoming.get(model) ?? []), edge]);
+	};
 	const edges: LayoutEdgeInput[] = [];
 	for (const rel of graph.relations) {
 		const card = cards.models.get(rel.from);
@@ -128,8 +157,9 @@ function layoutEdges(
 			from: rel.from,
 			to: rel.to,
 			sources: [portId(rel.from, source)],
-			targets: [portId(rel.to, "in")],
+			targets: [inPortId(rel.to, rel.id)],
 		});
+		addIncoming(rel.to, rel.id);
 	}
 	for (const u of graph.usages) {
 		const source = filesCardId(u.directory);
@@ -139,10 +169,16 @@ function layoutEdges(
 			from: source,
 			to: u.model,
 			sources: [portId(source, "out")],
-			targets: [portId(u.model, "in")],
+			targets: [inPortId(u.model, u.id)],
 		});
+		addIncoming(u.model, u.id);
 	}
-	return { edges, rowsWithRefs };
+	for (const ids of incoming.values())
+		ids.sort(
+			(a, b) =>
+				(sourceY.get(a) ?? 0) - (sourceY.get(b) ?? 0) || compareStrings(a, b),
+		);
+	return { edges, rowsWithRefs, incoming };
 }
 
 function filesNode(f: FilesCard): ElkNode {
@@ -169,6 +205,7 @@ function leafNodes(
 	graph: ModelGraph,
 	cards: Cards,
 	rowsWithRefs: Map<string, Set<number>>,
+	incoming: Map<string, string[]>,
 ): Map<string, ElkNode[]> {
 	const children = new Map<string, ElkNode[]>();
 	const push = (dir: string, node: ElkNode): void => {
@@ -181,7 +218,11 @@ function leafNodes(
 			id: card.id,
 			width: card.width,
 			height: card.height,
-			ports: modelPorts(card, rowsWithRefs.get(card.id) ?? new Set()),
+			ports: modelPorts(
+				card,
+				rowsWithRefs.get(card.id) ?? new Set(),
+				incoming.get(card.id) ?? [],
+			),
 			layoutOptions: { "elk.portConstraints": "FIXED_POS" },
 		});
 	}
@@ -208,32 +249,42 @@ function drawnDirectories(
 	return drawn;
 }
 
-const CONTAINER_OPTIONS = {
-	"elk.padding": `[top=${DIR_LABEL_H + 12}, left=14, bottom=14, right=14]`,
-	"elk.spacing.nodeNode": "24",
-};
-
-const ROOT_OPTIONS = {
-	"elk.algorithm": "layered",
+/**
+ * ELK reads these from each compound node, not from the root, and everything
+ * here sits inside a directory, so they must be set on every container.
+ * `considerModelOrder` must stay off: on compound nodes it makes ELK throw.
+ */
+const LAYERED_OPTIONS = {
 	"elk.direction": "RIGHT",
-	"elk.hierarchyHandling": "INCLUDE_CHILDREN",
 	"elk.edgeRouting": "ORTHOGONAL",
 	"elk.layered.spacing.nodeNodeBetweenLayers": "56",
 	"elk.layered.spacing.edgeNodeBetweenLayers": "20",
-	"elk.spacing.edgeEdge": "8",
-	"elk.spacing.edgeNode": "16",
+	"elk.layered.spacing.edgeEdgeBetweenLayers": "14",
+	"elk.spacing.edgeEdge": "14",
+	"elk.spacing.edgeNode": "20",
 	"elk.spacing.nodeNode": "24",
 	"elk.layered.nodePlacement.strategy": "NETWORK_SIMPLEX",
-	"elk.layered.considerModelOrder.strategy": "NODES_AND_EDGES",
+};
+
+const CONTAINER_OPTIONS = {
+	...LAYERED_OPTIONS,
+	"elk.padding": `[top=${DIR_LABEL_H + 12}, left=14, bottom=14, right=14]`,
+};
+
+const ROOT_OPTIONS = {
+	...LAYERED_OPTIONS,
+	"elk.algorithm": "layered",
+	"elk.hierarchyHandling": "INCLUDE_CHILDREN",
 	"elk.padding": `[top=${MARGIN}, left=${MARGIN}, bottom=${MARGIN}, right=${MARGIN}]`,
 };
 
 function elkGraph(
 	graph: ModelGraph,
 	cards: Cards,
+	sourceY: ReadonlyMap<string, number>,
 ): { root: ElkNode; edges: LayoutEdgeInput[] } {
-	const { edges, rowsWithRefs } = layoutEdges(graph, cards);
-	const children = leafNodes(graph, cards, rowsWithRefs);
+	const { edges, rowsWithRefs, incoming } = layoutEdges(graph, cards, sourceY);
+	const children = leafNodes(graph, cards, rowsWithRefs, incoming);
 	const drawn = drawnDirectories(graph, children);
 	const dirNode = (dirId: string): ElkNode => ({
 		id: dirId,
@@ -341,19 +392,12 @@ class Placer {
 	}
 }
 
-/**
- * Lays out the graph with ELK's layered algorithm: directories become nested
- * compound nodes, model cards and per-directory file cards are leaves, and
- * edges leave from the port of the property row that references the target.
- * ELK is deterministic for identical input, and every input list here is
- * sorted by id, so the layout is reproducible.
- */
-export async function computeLayout(graph: ModelGraph): Promise<Layout> {
-	const cards: Cards = {
-		models: new Map(graph.models.map((m) => [m.id, modelCard(m)])),
-		files: new Map(filesCards(graph).map((f) => [f.id, f])),
-	};
-	const { root, edges } = elkGraph(graph, cards);
+async function runElk(
+	graph: ModelGraph,
+	cards: Cards,
+	sourceY: ReadonlyMap<string, number>,
+): Promise<Layout> {
+	const { root, edges } = elkGraph(graph, cards, sourceY);
 	const result = await new ElkClass().layout(root);
 	const placer = new Placer(graph, cards, result);
 	for (const child of result.children ?? [])
@@ -361,4 +405,23 @@ export async function computeLayout(graph: ModelGraph): Promise<Layout> {
 	placer.placeEdges(result, new Map(edges.map((e) => [e.id, e])));
 	placer.layout.edges.sort((a, b) => compareStrings(a.id, b.id));
 	return placer.layout;
+}
+
+/**
+ * Lays out the graph with ELK's layered algorithm: directories become nested
+ * compound nodes, model cards and per-directory file cards are leaves, and
+ * edges leave from the port of the property row that references the target.
+ * It runs twice: incoming ports have fixed positions, so the first pass finds
+ * where each edge starts and the second orders the ports to match, which
+ * avoids crossings right at the card. ELK is deterministic for identical input, and every input list here is
+ * sorted by id, so the layout is reproducible.
+ */
+export async function computeLayout(graph: ModelGraph): Promise<Layout> {
+	const cards: Cards = {
+		models: new Map(graph.models.map((m) => [m.id, modelCard(m)])),
+		files: new Map(filesCards(graph).map((f) => [f.id, f])),
+	};
+	const draft = await runElk(graph, cards, new Map());
+	const sourceY = new Map(draft.edges.map((e) => [e.id, e.points[0]?.y ?? 0]));
+	return runElk(graph, cards, sourceY);
 }

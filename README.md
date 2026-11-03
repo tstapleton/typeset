@@ -64,6 +64,9 @@ module specifier (`@angular/core`) instead of a resolved declaration.
 - Directory boxes nest the way the folders do. Models at the feature root sit directly in
   the outer box.
 - A dashed card outline means the model isn't exported.
+- Blue lines are references from a property or type alias, purple lines are `extends`, and
+  thin orange lines are code in a directory using a model. A line's start marks the row
+  holding the reference; where it arrives on a card doesn't refer to a particular row.
 - Blue names in a type are models in the tree (click to jump); purple names are declared
   outside the model set.
 - Hover or click a card to highlight its connections; the side panel shows its source,

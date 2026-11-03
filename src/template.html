@@ -51,7 +51,7 @@
   .t-model { cursor: pointer; }
   svg.focus .card, svg.focus .edge, svg.focus .dir { transition: opacity .12s; }
   svg.focus .card:not(.on), svg.focus .edge:not(.on) { opacity: .14; }
-  svg.hide-property .e-property, svg.hide-extends .e-extends, svg.hide-alias .e-alias, svg.hide-usage .e-usage { display: none; }
+  svg.hide-property .e-property, svg.hide-extends .e-extends, svg.hide-usage .e-usage { display: none; }
   svg.hide-usage .card.files { display: none; }
 </style>
 </head>
@@ -76,10 +76,9 @@
   </div>
   <div class="card">
     <h2>Connections</h2>
-    <label class="toggle"><input type="checkbox" data-edge="property" checked /><span class="swatch-line" style="border-color:#60a5fa"></span>Property references a model</label>
+    <label class="toggle"><input type="checkbox" data-edge="property" checked /><span class="swatch-line" style="border-color:#60a5fa"></span>Property or type alias references a model</label>
     <label class="toggle"><input type="checkbox" data-edge="extends" checked /><span class="swatch-line" style="border-color:#c084fc;border-top-width:3px"></span>Interface extends a model</label>
-    <label class="toggle"><input type="checkbox" data-edge="alias" checked /><span class="swatch-line" style="border-color:#2dd4bf;border-top-style:dashed"></span>Type alias built from a model</label>
-    <label class="toggle"><input type="checkbox" data-edge="usage" checked /><span class="swatch-line" style="border-color:#f59e0b;border-top-style:dotted"></span>Code in a directory uses a model</label>
+    <label class="toggle"><input type="checkbox" data-edge="usage" checked /><span class="swatch-line" style="border-color:#f59e0b;border-top-width:1px;opacity:.6"></span>Code in a directory uses a model</label>
     <p class="dim" style="font-size:11px;margin-top:4px">Edges leave from the row that holds the reference. A dashed card outline means the model isn't exported. <span class="ext">Purple</span> names are declared outside the feature (or are classes or functions).</p>
   </div>
   <div class="card" id="detail" hidden></div>

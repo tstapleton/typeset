@@ -88,16 +88,13 @@ function modelCardSvg(
 	const rows = card.rows.length
 		? card.rows.map(rowSvg).join("")
 		: `<text x="${PAD_X}" y="${HEADER_H + ROW_H / 2 + 4}" class="mono r-empty">no members</text>`;
-	const badgeW = card.kind.length * 6.2 + 12;
 	return (
-		`<g class="card model k-${card.kind}${exported ? "" : " unexported"}" data-id="${esc(card.id)}" transform="translate(${card.x},${card.y})">` +
+		`<g class="card model${exported ? "" : " unexported"}" data-id="${esc(card.id)}" transform="translate(${card.x},${card.y})">` +
 		`<svg width="${card.width}" height="${card.height}" overflow="visible">` +
 		`<rect class="card-bg" width="${card.width}" height="${card.height}" rx="8"/>` +
 		`<path class="card-head" d="M0 8a8 8 0 0 1 8-8h${card.width - 16}a8 8 0 0 1 8 8v${HEADER_H - 8}h-${card.width}z"/>` +
 		`<text x="${PAD_X}" y="18" class="title">${esc(card.title)}</text>` +
 		`<text x="${PAD_X}" y="33" class="subtitle">${esc(card.subtitle)}${exported ? "" : " · not exported"}</text>` +
-		`<rect class="badge" x="${card.width - badgeW - 8}" y="8" width="${badgeW}" height="15" rx="7.5"/>` +
-		`<text class="badge-text" x="${card.width - badgeW / 2 - 8}" y="19" text-anchor="middle">${card.kind}</text>` +
 		rows +
 		`<rect class="card-outline" width="${card.width}" height="${card.height}" rx="8"/>` +
 		`</svg></g>`
@@ -150,18 +147,20 @@ function pathD(points: Point[]): string {
 }
 
 function edgeSvg(e: PlacedEdge): string {
-	return `<path class="edge e-${e.kind}" data-id="${esc(e.id)}" data-from="${esc(e.from)}" data-to="${esc(e.to)}" d="${pathD(e.points)}" marker-end="url(#m-${e.kind})"/>`;
+	// An alias body referencing a model reads the same as a property doing so.
+	const look = e.kind === "alias" ? "property" : e.kind;
+	return `<path class="edge e-${look}" data-id="${esc(e.id)}" data-from="${esc(e.from)}" data-to="${esc(e.to)}" d="${pathD(e.points)}" marker-end="url(#m-${look})"/>`;
 }
 
 const STYLE = `
 .md{--bg:#0b1120;--dir0:#111a2e;--dir1:#16223b;--dir2:#1c2b48;--dir3:#223456;--dir-stroke:#2f4366;--dir-text:#8aa0c4;
 --card:#141c2f;--head:#1d2942;--outline:#3a4d72;--sep:#24324d;--text:#e2e8f0;--dim:#7d8db0;
 --model:#60a5fa;--ext:#c4a1ff;--lit:#86efac;--prim:#94a3b8;--kw:#f0abfc;
---e-property:#60a5fa;--e-extends:#c084fc;--e-alias:#2dd4bf;--e-usage:#f59e0b;--files:#1f1a10;--files-stroke:#8a6420}
+--e-property:#60a5fa;--e-extends:#c084fc;--e-usage:#f59e0b;--files:#1f1a10;--files-stroke:#8a6420}
 @media (prefers-color-scheme: light){.md:not(.dark){--bg:#f8fafc;--dir0:#f1f5f9;--dir1:#e8eef6;--dir2:#dfe7f2;--dir3:#d5dfee;--dir-stroke:#b6c4da;--dir-text:#475a7a;
 --card:#ffffff;--head:#eef3fa;--outline:#a9b8d0;--sep:#e5ebf3;--text:#0f172a;--dim:#5d6b86;
 --model:#1d4ed8;--ext:#7c3aed;--lit:#15803d;--prim:#64748b;--kw:#a21caf;
---e-property:#2563eb;--e-extends:#9333ea;--e-alias:#0d9488;--e-usage:#d97706;--files:#fff7e6;--files-stroke:#d9a441}}
+--e-property:#2563eb;--e-extends:#9333ea;--e-usage:#d97706;--files:#fff7e6;--files-stroke:#d9a441}}
 .md{background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
 .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,"DejaVu Sans Mono",monospace;font-size:12px;fill:var(--text)}
 .dir rect{stroke:var(--dir-stroke);stroke-width:1}
@@ -171,9 +170,6 @@ const STYLE = `
 .unexported .card-outline{stroke-dasharray:4 3}
 .title{font-size:13px;font-weight:700;fill:var(--text);font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
 .subtitle{font-size:10px;fill:var(--dim)}
-.badge{fill:none;stroke:var(--dim)}.badge-text{font-size:9.5px;fill:var(--dim)}
-.k-enum .badge{stroke:var(--lit)}.k-enum .badge-text{fill:var(--lit)}
-.k-type .badge{stroke:var(--e-alias)}.k-type .badge-text{fill:var(--e-alias)}
 .row-sep{stroke:var(--sep)}
 .r-name{fill:var(--text)}.r-kw{fill:var(--kw)}.r-sep{fill:var(--dim)}.r-empty{fill:var(--dim);font-style:italic}
 .t-model{fill:var(--model);font-weight:600}.t-ext{fill:var(--ext)}.t-lit{fill:var(--lit)}.t-prim{fill:var(--prim)}
@@ -181,14 +177,13 @@ const STYLE = `
 .files-title{font-size:10px;font-weight:600;fill:var(--e-usage);text-transform:uppercase;letter-spacing:.05em}
 .edge{fill:none;stroke-width:1.5}
 .e-property{stroke:var(--e-property)}.e-extends{stroke:var(--e-extends);stroke-width:2}
-.e-alias{stroke:var(--e-alias);stroke-dasharray:6 3}.e-usage{stroke:var(--e-usage);stroke-dasharray:2 3;opacity:.8}
-.m-property{fill:var(--e-property)}.m-extends{fill:var(--bg);stroke:var(--e-extends);stroke-width:1.5}.m-alias{fill:var(--e-alias)}.m-usage{fill:var(--e-usage)}
+.e-usage{stroke:var(--e-usage);stroke-width:1;opacity:.6}
+.m-property{fill:var(--e-property)}.m-extends{fill:var(--bg);stroke:var(--e-extends);stroke-width:1.5}.m-usage{fill:var(--e-usage)}
 `;
 
 const MARKERS =
 	`<marker id="m-property" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="m-property" d="M0 0L10 5L0 10z"/></marker>` +
 	`<marker id="m-extends" viewBox="0 0 12 12" refX="11" refY="6" markerWidth="10" markerHeight="10" orient="auto-start-reverse"><path class="m-extends" d="M1 1L11 6L1 11z"/></marker>` +
-	`<marker id="m-alias" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="m-alias" d="M0 0L10 5L0 10z"/></marker>` +
 	`<marker id="m-usage" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path class="m-usage" d="M0 0L10 5L0 10z"/></marker>`;
 
 /**

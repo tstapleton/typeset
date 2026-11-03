@@ -74,7 +74,17 @@ Layout specifics:
 - Directories are ELK compound nodes (`hierarchyHandling: INCLUDE_CHILDREN`), so edges
   route across directory boxes.
 - Each card has fixed-position ports: one per row that references a model (east side)
-  and one "in" port on the header (west side).
+  and one per incoming edge (west side), stacked from the top. With a shared incoming
+  port ELK merged edges into trunks: on birdseed's `src/app`, unrelated edges overlapped
+  for 198k px in total, and that is now zero. Busy cards put arrows beside body rows, so
+  only the outgoing end of an edge identifies a member. More crossings are visible as a
+  result (237 → 331), partly because merged edges used to hide them.
+- `computeLayout` runs ELK twice. Incoming ports have fixed positions, so the first pass
+  finds where each edge starts and the second orders the ports to match.
+- ELK reads layered options from each compound node, not the root, so `LAYERED_OPTIONS`
+  goes on every directory. `considerModelOrder` makes ELK throw on compound nodes.
+- `SPLINES` routing was tried and rejected: far more bend points and edges through cards,
+  matching diff-diagram's experience.
 - Usage edges run from the directory's code card to the model, the same direction as
   model references (dependent → dependency). An earlier version pointed them the other
   way, and on birdseed's `src/app` that produced cycles and edges that wrapped around
