@@ -32,6 +32,27 @@ export interface Overlap {
 	typeDiffers: string[];
 }
 
+export interface ModelUsage {
+	model: string;
+	/** Implementation files that use the model. */
+	files: number;
+	/** Directories holding those files. */
+	directories: number;
+	/** References across those files. */
+	references: number;
+	/** Other models that reference the model. */
+	models: number;
+}
+
+export interface DirectoryImports {
+	/** A top-level directory of the feature, or the feature root. */
+	directory: string;
+	/** Distinct models used from other top-level directories. */
+	total: number;
+	/** Those models by the top-level directory declaring them, largest group first. */
+	from: Array<{ directory: string; models: string[] }>;
+}
+
 export interface Evidence {
 	/** Model names declared more than once in the feature. */
 	sameName: SameName[];
@@ -41,6 +62,10 @@ export interface Evidence {
 	sharedProperties: SharedProperty[];
 	/** Models nothing else in the feature references (no relations in, no usages). */
 	unreferenced: string[];
+	/** Models used by code or other models, by files plus models, highest first. */
+	mostUsed: ModelUsage[];
+	/** Top-level directories using models declared in other ones, highest total first. */
+	directoryImports: DirectoryImports[];
 }
 
 type Properties = Map<string, Map<string, PropertyOccurrence>>;
@@ -125,6 +150,72 @@ function unreferenced(graph: ModelGraph): string[] {
 	return graph.models.map((m) => m.id).filter((id) => !referenced.has(id));
 }
 
+function mostUsed(graph: ModelGraph): ModelUsage[] {
+	return graph.models
+		.map((m) => {
+			const usages = graph.usages.filter((u) => u.model === m.id);
+			const sites = usages.flatMap((u) => u.sites);
+			const referrers = graph.relations
+				.filter((r) => r.to === m.id && r.from !== m.id)
+				.map((r) => r.from);
+			return {
+				model: m.id,
+				files: sites.length,
+				directories: usages.length,
+				references: sites.reduce((sum, s) => sum + s.count, 0),
+				models: new Set(referrers).size,
+			};
+		})
+		.filter((u) => u.files + u.models > 0)
+		.sort(
+			(x, y) =>
+				y.files + y.models - (x.files + x.models) ||
+				y.references - x.references ||
+				compareStrings(x.model, y.model),
+		);
+}
+
+/** `dir:a/b/c` → `dir:a`; the feature root (`dir:`) stays as it is. */
+const topLevelDir = (id: string): string => id.split("/")[0];
+
+/**
+ * Rolled up to top-level directories, so use within one isn't counted. Code in
+ * a directory and model declarations in it both count as using a model.
+ */
+function directoryImports(graph: ModelGraph): DirectoryImports[] {
+	const homes = new Map(
+		graph.models.map((m) => [m.id, topLevelDir(m.directory)]),
+	);
+	const pairs = [
+		...graph.usages.map((u) => ({
+			user: topLevelDir(u.directory),
+			model: u.model,
+		})),
+		...graph.relations.map((r) => ({
+			user: homes.get(r.from) ?? "",
+			model: r.to,
+		})),
+	].filter(({ user, model }) => homes.get(model) !== user);
+	return [...groupBy(pairs, (p) => p.user).entries()]
+		.map(([directory, used]) => {
+			const models = [...new Set(used.map((p) => p.model))];
+			const from = [...groupBy(models, (m) => homes.get(m) ?? "").entries()]
+				.map(([home, ids]) => ({
+					directory: home,
+					models: ids.sort(compareStrings),
+				}))
+				.sort(
+					(x, y) =>
+						y.models.length - x.models.length ||
+						compareStrings(x.directory, y.directory),
+				);
+			return { directory, total: models.length, from };
+		})
+		.sort(
+			(x, y) => y.total - x.total || compareStrings(x.directory, y.directory),
+		);
+}
+
 export function computeEvidence(graph: ModelGraph): Evidence {
 	const props = propertiesByModel(graph);
 	return {
@@ -135,5 +226,7 @@ export function computeEvidence(graph: ModelGraph): Evidence {
 		),
 		sharedProperties: sharedProperties(props),
 		unreferenced: unreferenced(graph),
+		mostUsed: mostUsed(graph),
+		directoryImports: directoryImports(graph),
 	};
 }

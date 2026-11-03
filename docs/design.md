@@ -19,7 +19,8 @@ extract (ts-morph)  →  graph.json  →  evidence  →  layout (elkjs)  →  SV
 - **Rendering** (`src/render/`) only reads the `ModelGraph` type. It never imports from
   `src/extract/` (`compareStrings` lives in `graph.ts` for that reason).
 - **Evidence** (`src/evidence.ts`) is a pure function of the graph: repeated names,
-  shared property names, overlapping models, unreferenced models. It is computed at
+  shared property names, overlapping models, unreferenced models, most used models and
+  the models each top-level directory uses from the others. It is computed at
   render time and isn't stored in `graph.json`, so the graph stays a record of the code
   alone.
 

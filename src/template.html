@@ -257,6 +257,9 @@ function section(title, items, render, open = false) {
   el.innerHTML = `<summary>${esc(title)} <span class="count">(${items.length})</span></summary><ul class="ev-list">${items.map(render).join('') || '<li class="dim">none</li>'}</ul>`;
   $('#evidence').appendChild(el);
 }
+const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
+section('Most used models', evidence.mostUsed, (u) => `<li>${modelLink(u.model)}<br><span class="dim">${plural(u.files, 'file')} in ${(u.directories === 1 ? '1 directory' : `${u.directories} directories`)} · ${plural(u.references, 'reference')} · ${plural(u.models, 'model')}</span></li>`, true);
+section('Models used across top-level directories', evidence.directoryImports, (d) => `<li><code>${esc(dirLabel(d.directory))}</code> uses ${plural(d.total, 'model')}${d.from.map((f) => `<br><span class="dim">${f.models.length} from <code>${esc(dirLabel(f.directory))}</code>:</span> ${f.models.map(modelLink).join(', ')}`).join('')}</li>`, true);
 section('Same name, different files', evidence.sameName, (s) => `<li><code>${esc(s.name)}</code>: ${s.models.map((id) => `${modelLink(id)} <span class="dim mono">${esc(modelById.get(id).file)}</span>`).join('<br>')}</li>`, true);
 section('Models sharing property names', evidence.overlaps, (o) => `<li>${modelLink(o.a)} · ${modelLink(o.b)}<br><span class="mono">${o.shared.map((n) => o.typeDiffers.includes(n) ? `<span class="differs" title="declared with different types">${esc(n)}≠</span>` : esc(n)).join(', ')}</span></li>`, true);
 section('Property names in several models', evidence.sharedProperties, (p) => `<li><code>${esc(p.name)}</code>${p.distinctTypes > 1 ? ` <span class="differs">${p.distinctTypes} different types</span>` : ''}<br>${p.occurrences.map((o) => `${modelLink(o.model)}<span class="mono dim">${o.optional ? '?' : ''}: ${esc(o.type)}</span>`).join('<br>')}</li>`);

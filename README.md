@@ -72,7 +72,8 @@ module specifier (`@angular/core`) instead of a resolved declaration.
   outside the model set.
 - Hover or click a card to highlight its connections; the side panel shows its source,
   what it references, what references it, and every file that uses it.
-- The **Evidence** panel lists facts for comparison: models with the same name, pairs of
+- The **Evidence** panel lists facts for comparison: the most used models, how many models
+  each top-level directory uses from each other one, models with the same name, pairs of
   models declaring two or more of the same property names (`≠` marks a name declared with
   different types), property names that appear in several models, and models nothing in
   the feature references.

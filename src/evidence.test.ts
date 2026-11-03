@@ -98,4 +98,77 @@ describe("computeEvidence", () => {
 		});
 		expect(computeEvidence(g).unreferenced).toEqual([c.id]);
 	});
+
+	const relation = (from: Model, to: Model, member: string) => ({
+		id: `${from.id}->${to.id}@${member}`,
+		from: from.id,
+		to: to.id,
+		kind: "property" as const,
+		member,
+		via: [],
+	});
+	const usage = (m: Model, directory: string, files: string[], count = 1) => ({
+		id: `${m.id}->${directory}`,
+		model: m.id,
+		directory,
+		sites: files.map((file) => ({ file, count, via: "import" as const })),
+	});
+	const inDir = (m: Model, directory: string): Model => ({ ...m, directory });
+
+	it("counts each model's users, highest first, leaving out unused models", () => {
+		const g = graph([a, b, c], {
+			relations: [
+				relation(a, c, "order"),
+				relation(a, c, "lastOrder"),
+				relation(c, c, "parent"),
+			],
+			usages: [
+				usage(c, "dir:x", ["x/1.ts", "x/2.ts"], 3),
+				usage(c, "dir:y", ["y/1.ts"], 1),
+				usage(a, "dir:x", ["x/1.ts"], 1),
+			],
+		});
+		expect(computeEvidence(g).mostUsed).toEqual([
+			{
+				model: c.id,
+				files: 3,
+				directories: 2,
+				references: 7,
+				models: 1,
+			},
+			{ model: a.id, files: 1, directories: 1, references: 1, models: 0 },
+		]);
+	});
+
+	it("groups each top-level directory's outside models by where they're declared", () => {
+		const compiler1 = inDir(model("compiler/1.ts", "C1", []), "dir:compiler");
+		const compiler2 = inDir(model("compiler/2.ts", "C2", []), "dir:compiler");
+		const workspace = inDir(model("workspace/w.ts", "W", []), "dir:workspace");
+		const adapter = inDir(model("adapters/a.ts", "A", []), "dir:adapters");
+		const nested = inDir(model("adapters/x/n.ts", "N", []), "dir:adapters/x");
+		const g = graph([compiler1, compiler2, workspace, adapter, nested], {
+			relations: [
+				relation(adapter, compiler1, "x"),
+				relation(adapter, adapter, "self"),
+				relation(adapter, nested, "withinTopLevel"),
+			],
+			usages: [
+				usage(compiler1, "dir:adapters", ["adapters/b.ts"]),
+				usage(compiler2, "dir:adapters/x/y", ["adapters/x/y/c.ts"]),
+				usage(workspace, "dir:adapters", ["adapters/b.ts"]),
+				usage(adapter, "dir:adapters", ["adapters/b.ts"]),
+				usage(workspace, "dir:workspace", ["workspace/x.ts"]),
+			],
+		});
+		expect(computeEvidence(g).directoryImports).toEqual([
+			{
+				directory: "dir:adapters",
+				total: 3,
+				from: [
+					{ directory: "dir:compiler", models: [compiler1.id, compiler2.id] },
+					{ directory: "dir:workspace", models: [workspace.id] },
+				],
+			},
+		]);
+	});
 });
