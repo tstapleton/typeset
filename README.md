@@ -65,6 +65,9 @@ module specifier (`@angular/core`) instead of a resolved declaration.
 - Directory boxes nest the way the folders do. Models at the feature root sit directly in
   the outer box.
 - A dashed card outline means the model isn't exported.
+- A tinted header with a count (`3 dirs`) means that many other top-level directories of
+  the feature use the model, through code or a model declared there. Subdirectories count
+  as part of their top-level directory, and the feature root counts as its own.
 - Blue lines are references from a property or type alias, purple lines are `extends`, and
   thin orange lines are code in a directory using a model. A line's start marks the row
   holding the reference; where it arrives on a card doesn't refer to a particular row.
@@ -72,7 +75,7 @@ module specifier (`@angular/core`) instead of a resolved declaration.
   outside the model set.
 - Hover or click a card to highlight its connections; the side panel shows its source,
   what it references, what references it, and every file that uses it.
-- The **Evidence** panel lists facts for comparison: the most used models, how many models
+- The **Evidence** panel lists facts for comparison: the most shared models, how many models
   each top-level directory uses from each other one, models with the same name, pairs of
   models declaring two or more of the same property names (`≠` marks a name declared with
   different types), property names that appear in several models, and models nothing in

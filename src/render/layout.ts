@@ -5,7 +5,7 @@ import type {
 	ElkNode,
 	ElkPort,
 } from "elkjs/lib/elk-api.js";
-import { compareStrings, type ModelGraph } from "../graph.js";
+import { compareStrings, type ModelGraph, outsideUse } from "../graph.js";
 import {
 	FILES_HEADER_H,
 	type FilesCard,
@@ -417,8 +417,19 @@ async function runElk(
  * sorted by id, so the layout is reproducible.
  */
 export async function computeLayout(graph: ModelGraph): Promise<Layout> {
+	const outside = outsideUse(graph);
+	const labels = new Map(
+		graph.directories.map((d) => [
+			d.id,
+			d.path === "" ? `${d.name}/ (root)` : `${d.path}/`,
+		]),
+	);
+	const sharedWith = (id: string): string[] =>
+		(outside.get(id)?.directories ?? []).map((d) => labels.get(d) ?? d);
 	const cards: Cards = {
-		models: new Map(graph.models.map((m) => [m.id, modelCard(m)])),
+		models: new Map(
+			graph.models.map((m) => [m.id, modelCard(m, sharedWith(m.id))]),
+		),
 		files: new Map(filesCards(graph).map((f) => [f.id, f])),
 	};
 	const draft = await runElk(graph, cards, new Map());

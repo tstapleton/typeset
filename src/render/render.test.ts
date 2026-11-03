@@ -120,6 +120,22 @@ describe("layout and SVG", async () => {
 		expect(doc.querySelector(".badge")).toBeNull();
 	});
 
+	it("marks only models used outside their top-level directory, with a count", () => {
+		const card = (id: string) =>
+			doc.querySelector(`.card.model[data-id="${id}"]`);
+		const order = card("model:orders.models.ts#Order");
+		expect(order?.getAttribute("class")).toContain("shared");
+		expect(order?.querySelector(".shared-pill text")?.textContent).toBe(
+			"2 dirs",
+		);
+		expect(order?.querySelector(".shared-pill title")?.textContent).toContain(
+			"data-access/",
+		);
+		const local = card("model:customers/customer.model.ts#Address");
+		expect(local?.getAttribute("class")).not.toContain("shared");
+		expect(local?.querySelector(".shared-pill")).toBeNull();
+	});
+
 	it("marks model names in type text as links to their card", () => {
 		const targets = [...doc.querySelectorAll(".t-model")].map((t) =>
 			t.getAttribute("data-target"),

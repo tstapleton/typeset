@@ -115,28 +115,44 @@ describe("computeEvidence", () => {
 	});
 	const inDir = (m: Model, directory: string): Model => ({ ...m, directory });
 
-	it("counts each model's users, highest first, leaving out unused models", () => {
-		const g = graph([a, b, c], {
+	it("lists models used outside their top-level directory, most directories first", () => {
+		const wide = inDir(model("h/w.ts", "Wide", []), "dir:h");
+		const narrow = inDir(model("h/n.ts", "Narrow", []), "dir:h");
+		const inside = inDir(model("h/i.ts", "Inside", []), "dir:h");
+		const nested = inDir(model("h/sub/s.ts", "Nested", []), "dir:h/sub");
+		const outsider = inDir(model("y/z/o.ts", "Outsider", []), "dir:y/z");
+		const g = graph([wide, narrow, inside, nested, outsider], {
 			relations: [
-				relation(a, c, "order"),
-				relation(a, c, "lastOrder"),
-				relation(c, c, "parent"),
+				relation(wide, wide, "self"),
+				relation(nested, wide, "fromSubdirectory"),
+				relation(nested, inside, "fromSubdirectory"),
+				relation(outsider, wide, "one"),
+				relation(outsider, wide, "two"),
 			],
 			usages: [
-				usage(c, "dir:x", ["x/1.ts", "x/2.ts"], 3),
-				usage(c, "dir:y", ["y/1.ts"], 1),
-				usage(a, "dir:x", ["x/1.ts"], 1),
+				usage(wide, "dir:x", ["x/1.ts", "x/2.ts"], 3),
+				usage(wide, "dir:y/z", ["y/z/1.ts"]),
+				usage(wide, "dir:h", ["h/own.ts"], 50),
+				usage(wide, "dir:h/sub", ["h/sub/own.ts"], 50),
+				usage(narrow, "dir:x", ["x/1.ts"]),
+				usage(inside, "dir:h/sub", ["h/sub/own.ts"]),
 			],
 		});
-		expect(computeEvidence(g).mostUsed).toEqual([
+		expect(computeEvidence(g).mostShared).toEqual([
 			{
-				model: c.id,
+				model: wide.id,
+				directories: ["dir:x", "dir:y"],
 				files: 3,
-				directories: 2,
 				references: 7,
 				models: 1,
 			},
-			{ model: a.id, files: 1, directories: 1, references: 1, models: 0 },
+			{
+				model: narrow.id,
+				directories: ["dir:x"],
+				files: 1,
+				references: 1,
+				models: 0,
+			},
 		]);
 	});
 

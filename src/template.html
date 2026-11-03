@@ -79,7 +79,7 @@
     <label class="toggle"><input type="checkbox" data-edge="property" checked /><span class="swatch-line" style="border-color:#60a5fa"></span>Property or type alias references a model</label>
     <label class="toggle"><input type="checkbox" data-edge="extends" checked /><span class="swatch-line" style="border-color:#c084fc;border-top-width:3px"></span>Interface extends a model</label>
     <label class="toggle"><input type="checkbox" data-edge="usage" checked /><span class="swatch-line" style="border-color:#f59e0b;border-top-width:1px;opacity:.6"></span>Code in a directory uses a model</label>
-    <p class="dim" style="font-size:11px;margin-top:4px">Edges leave from the row that holds the reference. A dashed card outline means the model isn't exported. <span class="ext">Purple</span> names are declared outside the feature (or are classes or functions).</p>
+    <p class="dim" style="font-size:11px;margin-top:4px">Edges leave from the row that holds the reference. A dashed card outline means the model isn't exported. A tinted header with a count means that many other top-level directories use the model. <span class="ext">Purple</span> names are declared outside the feature (or are classes or functions).</p>
   </div>
   <div class="card" id="detail" hidden></div>
   <div class="card" id="evidence">
@@ -258,7 +258,7 @@ function section(title, items, render, open = false) {
   $('#evidence').appendChild(el);
 }
 const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
-section('Most used models', evidence.mostUsed, (u) => `<li>${modelLink(u.model)}<br><span class="dim">${plural(u.files, 'file')} in ${(u.directories === 1 ? '1 directory' : `${u.directories} directories`)} · ${plural(u.references, 'reference')} · ${plural(u.models, 'model')}</span></li>`, true);
+section('Most shared models', evidence.mostShared, (s) => `<li>${modelLink(s.model)}<br><span class="dim">used in ${s.directories.length === 1 ? '1 other top-level directory' : `${s.directories.length} other top-level directories`}: ${plural(s.files, 'file')} · ${plural(s.references, 'reference')} · ${plural(s.models, 'model')}</span><br><span class="dim mono">${s.directories.map((d) => esc(dirLabel(d))).join(', ')}</span></li>`, true);
 section('Models used across top-level directories', evidence.directoryImports, (d) => `<li><code>${esc(dirLabel(d.directory))}</code> uses ${plural(d.total, 'model')}${d.from.map((f) => `<br><span class="dim">${f.models.length} from <code>${esc(dirLabel(f.directory))}</code>:</span> ${f.models.map(modelLink).join(', ')}`).join('')}</li>`, true);
 section('Same name, different files', evidence.sameName, (s) => `<li><code>${esc(s.name)}</code>: ${s.models.map((id) => `${modelLink(id)} <span class="dim mono">${esc(modelById.get(id).file)}</span>`).join('<br>')}</li>`, true);
 section('Models sharing property names', evidence.overlaps, (o) => `<li>${modelLink(o.a)} · ${modelLink(o.b)}<br><span class="mono">${o.shared.map((n) => o.typeDiffers.includes(n) ? `<span class="differs" title="declared with different types">${esc(n)}≠</span>` : esc(n)).join(', ')}</span></li>`, true);

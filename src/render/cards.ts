@@ -14,6 +14,7 @@ export const ROW_H = 20;
 export const HEADER_H = 40;
 export const PAD_X = 10;
 const MIN_CARD_W = 180;
+const SHARED_PILL_CHARS = 10; // room for the pill next to the name
 /** Rows longer than this are truncated with an ellipsis; the full text is in a tooltip and the detail panel. */
 export const MAX_ROW_CHARS = 64;
 
@@ -39,6 +40,8 @@ export interface ModelCard {
 	id: string;
 	title: string;
 	subtitle: string;
+	/** Labels of the other top-level directories using this model. */
+	sharedWith: string[];
 	rows: CardRow[];
 	width: number;
 	height: number;
@@ -139,7 +142,7 @@ function memberRow(m: Member): CardRow {
 	};
 }
 
-export function modelCard(model: Model): ModelCard {
+export function modelCard(model: Model, sharedWith: string[]): ModelCard {
 	const rows = [
 		...extendsRows(model),
 		...aliasRows(model),
@@ -149,7 +152,7 @@ export function modelCard(model: Model): ModelCard {
 	const title = params ? `${model.name}<${params}>` : model.name;
 	const subtitle = basename(model.file);
 	const longest = Math.max(
-		title.length,
+		title.length + (sharedWith.length > 0 ? SHARED_PILL_CHARS : 0),
 		subtitle.length,
 		...rows.map((r) => Math.min(MAX_ROW_CHARS, rowText(r).length)),
 	);
@@ -157,6 +160,7 @@ export function modelCard(model: Model): ModelCard {
 		id: model.id,
 		title,
 		subtitle,
+		sharedWith,
 		rows,
 		width: Math.max(MIN_CARD_W, Math.ceil(longest * CHAR_W + PAD_X * 2)),
 		height: HEADER_H + Math.max(1, rows.length) * ROW_H + 6,

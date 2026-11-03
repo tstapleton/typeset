@@ -191,3 +191,52 @@ export function modelId(file: string, name: string): string {
 export function compareStrings(a: string, b: string): number {
 	return a < b ? -1 : a > b ? 1 : 0;
 }
+
+/** `dir:a/b/c` → `dir:a`; the feature root (`dir:`) stays as it is. */
+export const topLevelDir = (id: string): string => id.split("/")[0];
+
+/**
+ * How a model is used from outside the top-level directory declaring it. A
+ * directory's subdirectories count as inside it, and the feature root is a
+ * directory of its own.
+ */
+export interface OutsideUse {
+	/** Other top-level directories using the model, through code or a model declared there. */
+	directories: string[];
+	/** Implementation files in those directories that use the model. */
+	files: number;
+	/** References across those files. */
+	references: number;
+	/** Models in those directories that reference the model. */
+	models: number;
+}
+
+/** Keyed by model id. Models used only inside their top-level directory have no entry. */
+export function outsideUse(graph: ModelGraph): Map<string, OutsideUse> {
+	const homes = new Map(
+		graph.models.map((m) => [m.id, topLevelDir(m.directory)]),
+	);
+	const out = new Map<string, OutsideUse>();
+	for (const m of graph.models) {
+		const home = homes.get(m.id);
+		const usages = graph.usages.filter(
+			(u) => u.model === m.id && topLevelDir(u.directory) !== home,
+		);
+		const sites = usages.flatMap((u) => u.sites);
+		const referrers = graph.relations
+			.filter((r) => r.to === m.id && homes.get(r.from) !== home)
+			.map((r) => r.from);
+		const directories = new Set([
+			...usages.map((u) => topLevelDir(u.directory)),
+			...referrers.map((id) => homes.get(id) ?? ""),
+		]);
+		if (directories.size === 0) continue;
+		out.set(m.id, {
+			directories: [...directories].sort(compareStrings),
+			files: sites.length,
+			references: sites.reduce((sum, s) => sum + s.count, 0),
+			models: new Set(referrers).size,
+		});
+	}
+	return out;
+}

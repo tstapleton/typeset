@@ -81,6 +81,19 @@ function rowSvg(row: CardRow, index: number): string {
 	);
 }
 
+/** The count of other top-level directories using a model, at the right of its header. */
+function sharedPillSvg(card: Layout["models"][number]): string {
+	const count = card.sharedWith.length;
+	const text = `${count} dir${count === 1 ? "" : "s"}`;
+	const w = text.length * 6.2 + 12;
+	const tip = `Used in ${count} other top-level director${count === 1 ? "y" : "ies"}:\n${card.sharedWith.join("\n")}`;
+	return (
+		`<g class="shared-pill"><title>${esc(tip)}</title>` +
+		`<rect x="${card.width - w - 8}" y="8" width="${w}" height="15" rx="7.5"/>` +
+		`<text x="${card.width - w / 2 - 8}" y="19" text-anchor="middle">${text}</text></g>`
+	);
+}
+
 function modelCardSvg(
 	card: Layout["models"][number],
 	exported: boolean,
@@ -88,13 +101,15 @@ function modelCardSvg(
 	const rows = card.rows.length
 		? card.rows.map(rowSvg).join("")
 		: `<text x="${PAD_X}" y="${HEADER_H + ROW_H / 2 + 4}" class="mono r-empty">no members</text>`;
+	const shared = card.sharedWith.length > 0;
 	return (
-		`<g class="card model${exported ? "" : " unexported"}" data-id="${esc(card.id)}" transform="translate(${card.x},${card.y})">` +
+		`<g class="card model${exported ? "" : " unexported"}${shared ? " shared" : ""}" data-id="${esc(card.id)}" transform="translate(${card.x},${card.y})">` +
 		`<svg width="${card.width}" height="${card.height}" overflow="visible">` +
 		`<rect class="card-bg" width="${card.width}" height="${card.height}" rx="8"/>` +
 		`<path class="card-head" d="M0 8a8 8 0 0 1 8-8h${card.width - 16}a8 8 0 0 1 8 8v${HEADER_H - 8}h-${card.width}z"/>` +
 		`<text x="${PAD_X}" y="18" class="title">${esc(card.title)}</text>` +
 		`<text x="${PAD_X}" y="33" class="subtitle">${esc(card.subtitle)}${exported ? "" : " · not exported"}</text>` +
+		(shared ? sharedPillSvg(card) : "") +
 		rows +
 		`<rect class="card-outline" width="${card.width}" height="${card.height}" rx="8"/>` +
 		`</svg></g>`
@@ -156,11 +171,11 @@ const STYLE = `
 .md{--bg:#0b1120;--dir0:#111a2e;--dir1:#16223b;--dir2:#1c2b48;--dir3:#223456;--dir-stroke:#2f4366;--dir-text:#8aa0c4;
 --card:#141c2f;--head:#1d2942;--outline:#3a4d72;--sep:#24324d;--text:#e2e8f0;--dim:#7d8db0;
 --model:#60a5fa;--ext:#c4a1ff;--lit:#86efac;--prim:#94a3b8;--kw:#f0abfc;
---e-property:#60a5fa;--e-extends:#c084fc;--e-usage:#f59e0b;--files:#1f1a10;--files-stroke:#8a6420}
+--e-property:#60a5fa;--e-extends:#c084fc;--e-usage:#f59e0b;--shared:#2dd4bf;--shared-head:#17343f;--files:#1f1a10;--files-stroke:#8a6420}
 @media (prefers-color-scheme: light){.md:not(.dark){--bg:#f8fafc;--dir0:#f1f5f9;--dir1:#e8eef6;--dir2:#dfe7f2;--dir3:#d5dfee;--dir-stroke:#b6c4da;--dir-text:#475a7a;
 --card:#ffffff;--head:#eef3fa;--outline:#a9b8d0;--sep:#e5ebf3;--text:#0f172a;--dim:#5d6b86;
 --model:#1d4ed8;--ext:#7c3aed;--lit:#15803d;--prim:#64748b;--kw:#a21caf;
---e-property:#2563eb;--e-extends:#9333ea;--e-usage:#d97706;--files:#fff7e6;--files-stroke:#d9a441}}
+--e-property:#2563eb;--e-extends:#9333ea;--e-usage:#d97706;--shared:#0f766e;--shared-head:#d9f3ee;--files:#fff7e6;--files-stroke:#d9a441}}
 .md{background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
 .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,"DejaVu Sans Mono",monospace;font-size:12px;fill:var(--text)}
 .dir rect{stroke:var(--dir-stroke);stroke-width:1}
@@ -168,6 +183,8 @@ const STYLE = `
 .dir-label{font-size:12px;font-weight:600;fill:var(--dir-text);font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
 .card-bg{fill:var(--card)}.card-head{fill:var(--head)}.card-outline{fill:none;stroke:var(--outline)}
 .unexported .card-outline{stroke-dasharray:4 3}
+.shared .card-head{fill:var(--shared-head)}
+.shared-pill rect{fill:none;stroke:var(--shared)}.shared-pill text{font-size:9.5px;fill:var(--shared)}
 .title{font-size:13px;font-weight:700;fill:var(--text);font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
 .subtitle{font-size:10px;fill:var(--dim)}
 .row-sep{stroke:var(--sep)}

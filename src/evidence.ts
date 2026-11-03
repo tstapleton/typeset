@@ -3,7 +3,13 @@
 // the graph: no scoring thresholds beyond "appears more than once", and no
 // suggestions about what to do with the result.
 
-import { compareStrings, type ModelGraph } from "./graph.js";
+import {
+	compareStrings,
+	type ModelGraph,
+	type OutsideUse,
+	outsideUse,
+	topLevelDir,
+} from "./graph.js";
 
 export interface SameName {
 	name: string;
@@ -32,16 +38,8 @@ export interface Overlap {
 	typeDiffers: string[];
 }
 
-export interface ModelUsage {
+export interface SharedModel extends OutsideUse {
 	model: string;
-	/** Implementation files that use the model. */
-	files: number;
-	/** Directories holding those files. */
-	directories: number;
-	/** References across those files. */
-	references: number;
-	/** Other models that reference the model. */
-	models: number;
 }
 
 export interface DirectoryImports {
@@ -62,8 +60,8 @@ export interface Evidence {
 	sharedProperties: SharedProperty[];
 	/** Models nothing else in the feature references (no relations in, no usages). */
 	unreferenced: string[];
-	/** Models used by code or other models, by files plus models, highest first. */
-	mostUsed: ModelUsage[];
+	/** Models used outside the top-level directory declaring them, most other directories first. */
+	mostShared: SharedModel[];
 	/** Top-level directories using models declared in other ones, highest total first. */
 	directoryImports: DirectoryImports[];
 }
@@ -150,33 +148,17 @@ function unreferenced(graph: ModelGraph): string[] {
 	return graph.models.map((m) => m.id).filter((id) => !referenced.has(id));
 }
 
-function mostUsed(graph: ModelGraph): ModelUsage[] {
-	return graph.models
-		.map((m) => {
-			const usages = graph.usages.filter((u) => u.model === m.id);
-			const sites = usages.flatMap((u) => u.sites);
-			const referrers = graph.relations
-				.filter((r) => r.to === m.id && r.from !== m.id)
-				.map((r) => r.from);
-			return {
-				model: m.id,
-				files: sites.length,
-				directories: usages.length,
-				references: sites.reduce((sum, s) => sum + s.count, 0),
-				models: new Set(referrers).size,
-			};
-		})
-		.filter((u) => u.files + u.models > 0)
+function mostShared(graph: ModelGraph): SharedModel[] {
+	return [...outsideUse(graph).entries()]
+		.map(([model, use]) => ({ model, ...use }))
 		.sort(
 			(x, y) =>
+				y.directories.length - x.directories.length ||
 				y.files + y.models - (x.files + x.models) ||
 				y.references - x.references ||
 				compareStrings(x.model, y.model),
 		);
 }
-
-/** `dir:a/b/c` → `dir:a`; the feature root (`dir:`) stays as it is. */
-const topLevelDir = (id: string): string => id.split("/")[0];
 
 /**
  * Rolled up to top-level directories, so use within one isn't counted. Code in
@@ -226,7 +208,7 @@ export function computeEvidence(graph: ModelGraph): Evidence {
 		),
 		sharedProperties: sharedProperties(props),
 		unreferenced: unreferenced(graph),
-		mostUsed: mostUsed(graph),
+		mostShared: mostShared(graph),
 		directoryImports: directoryImports(graph),
 	};
 }
