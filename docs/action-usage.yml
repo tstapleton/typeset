@@ -1,0 +1,31 @@
+# Example workflow for consuming the typeset action from another repo.
+# Copy into .github/workflows/ of the consuming repo and adjust feature-dir.
+#
+# The diagram is uploaded as a single index.html artifact (archive: false), so
+# the run's summary links straight to a page that opens in the browser.
+#
+# Note: if the consuming repo is private and this repo is also private, the
+# consuming repo's org/owner must grant Actions access to this repo
+# (Settings → Actions → General → Access) or the `uses:` resolution fails.
+name: typeset
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: typeset-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  diagram:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      # node_modules is optional: without it, imports from packages show as
+      # their module specifier instead of resolving to a declaration.
+      - uses: tstapleton/typeset@main
+        with:
+          feature-dir: src/app/features/my-feature

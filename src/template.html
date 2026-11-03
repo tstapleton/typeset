@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>__TYPESET_TITLE__</title>
+<style>
+  :root {
+    --bg: #0a0f1c; --surface: #141c2f; --surface2: #1b2540; --border: #2c3b5a;
+    --text: #e2e8f0; --dim: #7d8db0; --accent: #60a5fa; --warn: #f59e0b; --ext: #c4a1ff;
+    --sidebar-w: 340px;
+  }
+  @media (prefers-color-scheme: light) {
+    :root { --bg: #f8fafc; --surface: #ffffff; --surface2: #f1f5f9; --border: #d5dfee; --text: #0f172a; --dim: #5d6b86; --accent: #1d4ed8; --warn: #b45309; --ext: #7c3aed; }
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font: 13px -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; display: flex; height: 100vh; overflow: hidden; }
+  code, pre, .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; }
+  #sidebar { width: var(--sidebar-w); min-width: var(--sidebar-w); background: var(--surface); border-right: 1px solid var(--border); overflow-y: auto; padding: 14px; display: flex; flex-direction: column; gap: 12px; }
+  h1 { font-size: 14px; font-weight: 600; }
+  h2 { font-size: 10px; font-weight: 600; color: var(--dim); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; }
+  h3 { font-size: 12px; font-weight: 600; margin: 8px 0 4px; }
+  .card { background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; padding: 10px 12px; display: flex; flex-direction: column; gap: 4px; }
+  .meta-row { display: flex; justify-content: space-between; font-size: 11px; color: var(--dim); }
+  .meta-val { color: var(--text); font-weight: 500; }
+  input[type=search] { width: 100%; padding: 6px 8px; border-radius: 4px; border: 1px solid var(--border); background: var(--bg); color: var(--text); font-size: 12px; }
+  label.toggle { display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--dim); cursor: pointer; }
+  .swatch-line { width: 26px; height: 0; border-top: 2px solid; flex-shrink: 0; }
+  details { font-size: 12px; }
+  details summary { cursor: pointer; color: var(--text); font-weight: 500; padding: 2px 0; }
+  details summary .count { color: var(--dim); font-weight: 400; }
+  .ev-list { list-style: none; display: flex; flex-direction: column; gap: 4px; margin: 4px 0 2px; }
+  .ev-list li { padding: 4px 6px; border-radius: 4px; background: var(--bg); line-height: 1.45; }
+  .link { color: var(--accent); cursor: pointer; text-decoration: none; }
+  .link:hover { text-decoration: underline; }
+  .differs { color: var(--warn); }
+  .ext { color: var(--ext); }
+  .dim { color: var(--dim); }
+  #detail[hidden] { display: none; }
+  #detail pre { background: var(--bg); border: 1px solid var(--border); border-radius: 4px; padding: 8px; overflow-x: auto; white-space: pre; max-height: 320px; }
+  #detail ul { list-style: none; display: flex; flex-direction: column; gap: 3px; }
+  #diagram-area { flex: 1; position: relative; overflow: hidden; background: var(--bg); cursor: grab; }
+  #diagram-area.panning { cursor: grabbing; }
+  #canvas { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
+  #zoom { position: absolute; right: 12px; top: 12px; display: flex; gap: 4px; z-index: 2; }
+  #zoom button { padding: 4px 10px; font-size: 11px; border-radius: 4px; border: 1px solid var(--border); background: var(--surface); color: var(--text); cursor: pointer; }
+  .card.model, .card.files { cursor: pointer; }
+  svg .card.match .card-outline { stroke: var(--warn); stroke-width: 2; }
+  svg .card.selected .card-outline { stroke: var(--warn); stroke-width: 2.5; }
+  svg .card.model:hover:not(.selected) .card-outline { stroke: var(--accent); stroke-width: 2; }
+  .t-model { cursor: pointer; }
+  svg.focus .card, svg.focus .edge, svg.focus .dir { transition: opacity .12s; }
+  svg.focus .card:not(.on), svg.focus .edge:not(.on) { opacity: .14; }
+  svg.hide-property .e-property, svg.hide-extends .e-extends, svg.hide-alias .e-alias, svg.hide-usage .e-usage { display: none; }
+  svg.hide-usage .card.files { display: none; }
+</style>
+</head>
+<body>
+<div id="sidebar">
+  <div>
+    <h1>Typeset</h1>
+    <p class="dim" style="font-size:10px;margin-top:3px">TypeScript models · ownership &amp; usage</p>
+  </div>
+  <div class="card">
+    <h2>Scope</h2>
+    <div class="meta-row"><span>Feature</span><span class="meta-val mono" id="meta-feature">—</span></div>
+    <div class="meta-row"><span>Directories</span><span class="meta-val" id="meta-dirs">—</span></div>
+    <div class="meta-row"><span>Models</span><span class="meta-val" id="meta-models">—</span></div>
+    <div class="meta-row"><span>Model → model references</span><span class="meta-val" id="meta-relations">—</span></div>
+    <div class="meta-row"><span>Model → directory usages</span><span class="meta-val" id="meta-usages">—</span></div>
+  </div>
+  <div class="card">
+    <h2>Find</h2>
+    <input type="search" id="search" placeholder="Model or property name" autocomplete="off" />
+    <div class="dim" id="search-result" style="font-size:11px"></div>
+  </div>
+  <div class="card">
+    <h2>Connections</h2>
+    <label class="toggle"><input type="checkbox" data-edge="property" checked /><span class="swatch-line" style="border-color:#60a5fa"></span>Property references a model</label>
+    <label class="toggle"><input type="checkbox" data-edge="extends" checked /><span class="swatch-line" style="border-color:#c084fc;border-top-width:3px"></span>Interface extends a model</label>
+    <label class="toggle"><input type="checkbox" data-edge="alias" checked /><span class="swatch-line" style="border-color:#2dd4bf;border-top-style:dashed"></span>Type alias built from a model</label>
+    <label class="toggle"><input type="checkbox" data-edge="usage" checked /><span class="swatch-line" style="border-color:#f59e0b;border-top-style:dotted"></span>Code in a directory uses a model</label>
+    <p class="dim" style="font-size:11px;margin-top:4px">Edges leave from the row that holds the reference. A dashed card outline means the model isn't exported. <span class="ext">Purple</span> names are declared outside the feature (or are classes or functions).</p>
+  </div>
+  <div class="card" id="detail" hidden></div>
+  <div class="card" id="evidence">
+    <h2>Evidence</h2>
+    <p class="dim" style="font-size:11px">Facts read from the code, listed for comparison. Click a model to find it.</p>
+  </div>
+</div>
+<div id="diagram-area">
+  <div id="zoom"><button type="button" id="zoom-out">−</button><button type="button" id="zoom-in">+</button><button type="button" id="zoom-fit">Fit</button><button type="button" id="zoom-1">100%</button></div>
+  <div id="canvas">__TYPESET_SVG__</div>
+</div>
+<script>
+const DATA = __TYPESET_DATA__;
+const { graph, evidence } = DATA;
+const $ = (s, el = document) => el.querySelector(s);
+const $$ = (s, el = document) => [...el.querySelectorAll(s)];
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+const svg = $('#canvas svg');
+const modelById = new Map(graph.models.map((m) => [m.id, m]));
+const dirById = new Map(graph.directories.map((d) => [d.id, d]));
+const dirLabel = (id) => { const d = dirById.get(id); return d ? (d.path === '' ? `${d.name}/ (root)` : `${d.path}/`) : id; };
+const modelLink = (id) => { const m = modelById.get(id); return m ? `<a class="link mono" data-goto="${esc(id)}" title="${esc(m.file)}">${esc(m.name)}</a>` : esc(id); };
+const viaText = (via) => via.length ? ` <span class="dim">via ${esc(via.join(' › '))}</span>` : '';
+
+// ─── Summary ─────────────────────────────────────────────────────────────────
+$('#meta-feature').textContent = graph.featureDir;
+$('#meta-dirs').textContent = graph.directories.length;
+$('#meta-models').textContent = graph.models.length;
+$('#meta-relations').textContent = graph.relations.length;
+$('#meta-usages').textContent = graph.usages.length;
+
+// ─── Pan & zoom ──────────────────────────────────────────────────────────────
+const area = $('#diagram-area');
+const canvas = $('#canvas');
+let view = { x: 0, y: 0, k: 1 };
+const apply = () => { canvas.style.transform = `translate(${view.x}px,${view.y}px) scale(${view.k})`; };
+const svgW = +svg.getAttribute('width'), svgH = +svg.getAttribute('height');
+function fitView() {
+  const r = area.getBoundingClientRect();
+  const k = Math.min(1, (r.width - 24) / svgW, (r.height - 24) / svgH);
+  view = { k, x: (r.width - svgW * k) / 2, y: Math.max(12, (r.height - svgH * k) / 2) };
+  apply();
+}
+function zoomAt(factor, cx, cy) {
+  const k = Math.min(3, Math.max(0.1, view.k * factor));
+  view.x = cx - (cx - view.x) * (k / view.k);
+  view.y = cy - (cy - view.y) * (k / view.k);
+  view.k = k; apply();
+}
+area.addEventListener('wheel', (e) => {
+  e.preventDefault();
+  const r = area.getBoundingClientRect();
+  // Pinch (ctrl+wheel) or ⌘/ctrl+wheel zooms; plain wheel / two-finger scroll pans.
+  if (e.ctrlKey || e.metaKey) zoomAt(Math.exp(-e.deltaY * 0.01), e.clientX - r.left, e.clientY - r.top);
+  else { view.x -= e.deltaX; view.y -= e.deltaY; apply(); }
+}, { passive: false });
+let drag = null;
+area.addEventListener('pointerdown', (e) => { if (e.button !== 0 || e.target.closest('#zoom')) return; drag = { x: e.clientX, y: e.clientY, vx: view.x, vy: view.y, moved: false }; });
+window.addEventListener('pointermove', (e) => {
+  if (!drag) return;
+  const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+  if (!drag.moved && Math.hypot(dx, dy) < 4) return;
+  drag.moved = true; area.classList.add('panning');
+  view.x = drag.vx + dx; view.y = drag.vy + dy; apply();
+});
+window.addEventListener('pointerup', () => { setTimeout(() => { drag = null; }, 0); area.classList.remove('panning'); });
+$('#zoom-in').onclick = () => { const r = area.getBoundingClientRect(); zoomAt(1.25, r.width / 2, r.height / 2); };
+$('#zoom-out').onclick = () => { const r = area.getBoundingClientRect(); zoomAt(0.8, r.width / 2, r.height / 2); };
+$('#zoom-fit').onclick = fitView;
+$('#zoom-1').onclick = () => { const r = area.getBoundingClientRect(); zoomAt(1 / view.k, r.width / 2, r.height / 2); };
+
+function reveal(id) {
+  const el = svg.querySelector(`.card[data-id="${CSS.escape(id)}"]`);
+  if (!el) return;
+  const b = el.getBBox(); const t = el.transform.baseVal.consolidate()?.matrix;
+  const x = (t ? t.e : 0) + b.x + b.width / 2, y = (t ? t.f : 0) + b.y + b.height / 2;
+  const r = area.getBoundingClientRect();
+  if (view.k < 0.6) view.k = 0.9;
+  view.x = r.width / 2 - x * view.k; view.y = r.height / 2 - y * view.k; apply();
+}
+
+// ─── Edge toggles ────────────────────────────────────────────────────────────
+for (const cb of $$('input[data-edge]')) cb.addEventListener('change', () => svg.classList.toggle(`hide-${cb.dataset.edge}`, !cb.checked));
+
+// ─── Focus & selection ───────────────────────────────────────────────────────
+function focusOn(ids) {
+  for (const el of $$('.on', svg)) el.classList.remove('on');
+  if (!ids) { svg.classList.remove('focus'); return; }
+  const on = new Set(ids);
+  for (const p of $$('.edge', svg)) if (on.has(p.dataset.from) || on.has(p.dataset.to)) p.classList.add('on');
+  const ends = new Set(on);
+  for (const p of $$('.edge.on', svg)) { ends.add(p.dataset.from); ends.add(p.dataset.to); }
+  for (const c of $$('.card', svg)) if (ends.has(c.dataset.id)) c.classList.add('on');
+  svg.classList.add('focus');
+}
+let selected = null;
+function select(id, { scroll = true } = {}) {
+  for (const c of $$('.card.selected', svg)) c.classList.remove('selected');
+  selected = id;
+  const detail = $('#detail');
+  if (!id) { detail.hidden = true; focusOn(null); history.replaceState(null, '', location.pathname + location.search); return; }
+  const card = svg.querySelector(`.card[data-id="${CSS.escape(id)}"]`);
+  card?.classList.add('selected');
+  focusOn([id]);
+  if (id.startsWith('files:')) renderFilesDetail(id.slice('files:'.length));
+  else renderModelDetail(id);
+  detail.hidden = false;
+  if (scroll) detail.scrollIntoView({ block: 'nearest' });
+  history.replaceState(null, '', `#${encodeURIComponent(id)}`);
+}
+function renderModelDetail(id) {
+  const m = modelById.get(id);
+  const out = graph.relations.filter((r) => r.from === id);
+  const inc = graph.relations.filter((r) => r.to === id);
+  const uses = graph.usages.filter((u) => u.model === id);
+  const ext = [...m.extends, ...(m.aliasOf ? [m.aliasOf] : []), ...m.members].flatMap((x) => x.external.map((e) => ({ ...e, member: x.name })));
+  const relItem = (r, other) => `<li>${r.member ? `<code>${esc(r.member)}</code> → ` : `<span class="dim">${r.kind}</span> `}${modelLink(other)}${viaText(r.via)}</li>`;
+  const incItem = (r) => `<li>${modelLink(r.from)}${r.member ? `.<code>${esc(r.member)}</code>` : ` <span class="dim">${r.kind}</span>`}${viaText(r.via)}</li>`;
+  $('#detail').innerHTML = `
+    <h2>Selected ${esc(m.kind)}</h2>
+    <div><strong class="mono">${esc(m.name)}</strong>${m.exported ? '' : ' <span class="dim">(not exported)</span>'}</div>
+    <div class="dim mono" style="font-size:11px">${esc(m.file)}:${m.line}</div>
+    ${m.doc ? `<p>${esc(m.doc)}</p>` : ''}
+    <pre>${esc(m.source)}</pre>
+    <h3>References (${out.length})</h3><ul>${out.map((r) => relItem(r, r.to)).join('') || '<li class="dim">none</li>'}</ul>
+    <h3>Referenced by models (${inc.length})</h3><ul>${inc.map(incItem).join('') || '<li class="dim">none</li>'}</ul>
+    <h3>Used by code in (${uses.length})</h3><ul>${uses.map((u) => `<li><strong>${esc(dirLabel(u.directory))}</strong><ul style="margin-left:10px">${u.sites.map((s) => `<li class="mono">${esc(s.file)} <span class="dim">×${s.count}${s.via === 'local' ? ', same file' : ''}</span></li>`).join('')}</ul></li>`).join('') || '<li class="dim">none</li>'}</ul>
+    ${ext.length ? `<h3>Outside the model set (${ext.length})</h3><ul>${ext.map((e) => `<li><code>${esc(e.member)}</code> → <span class="ext mono">${esc(e.name)}</span> <span class="dim mono">${esc(e.module)}</span></li>`).join('')}</ul>` : ''}
+    <p><a class="link" data-clear>Clear selection</a></p>`;
+}
+function renderFilesDetail(dirId) {
+  const uses = graph.usages.filter((u) => u.directory === dirId);
+  const byFile = new Map();
+  for (const u of uses) for (const s of u.sites) byFile.set(s.file, [...(byFile.get(s.file) || []), { model: u.model, ...s }]);
+  focusOn([`files:${dirId}`]);
+  $('#detail').innerHTML = `
+    <h2>Code in ${esc(dirLabel(dirId))}</h2>
+    <ul>${[...byFile.entries()].map(([f, list]) => `<li><span class="mono">${esc(f)}</span><ul style="margin-left:10px">${list.map((x) => `<li>${modelLink(x.model)} <span class="dim">×${x.count}${x.via === 'local' ? ', same file' : ''}</span></li>`).join('')}</ul></li>`).join('')}</ul>
+    <p><a class="link" data-clear>Clear selection</a></p>`;
+}
+svg.addEventListener('click', (e) => {
+  if (drag?.moved) return;
+  const tok = e.target.closest('.t-model');
+  if (tok) { select(tok.dataset.target); reveal(tok.dataset.target); return; }
+  const card = e.target.closest('.card');
+  select(card ? card.dataset.id : null);
+});
+svg.addEventListener('mouseover', (e) => {
+  if (selected) return;
+  const card = e.target.closest('.card');
+  focusOn(card ? [card.dataset.id] : null);
+});
+svg.addEventListener('mouseleave', () => { if (!selected) focusOn(null); });
+document.addEventListener('click', (e) => {
+  const go = e.target.closest('[data-goto]');
+  if (go) { e.preventDefault(); select(go.dataset.goto, { scroll: false }); reveal(go.dataset.goto); }
+  if (e.target.closest('[data-clear]')) select(null);
+});
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') select(null); });
+
+// ─── Search ──────────────────────────────────────────────────────────────────
+$('#search').addEventListener('input', (e) => {
+  const q = e.target.value.trim().toLowerCase();
+  for (const c of $$('.card.match', svg)) c.classList.remove('match');
+  if (!q) { $('#search-result').textContent = ''; if (!selected) focusOn(null); return; }
+  const hits = graph.models.filter((m) => m.name.toLowerCase().includes(q) || m.members.some((x) => x.name.toLowerCase().includes(q)));
+  for (const m of hits) svg.querySelector(`.card[data-id="${CSS.escape(m.id)}"]`)?.classList.add('match');
+  $('#search-result').innerHTML = hits.length ? hits.map((m) => modelLink(m.id)).join(', ') : 'No matches';
+});
+
+// ─── Evidence ────────────────────────────────────────────────────────────────
+function section(title, items, render, open = false) {
+  const el = document.createElement('details');
+  if (open) el.open = true;
+  el.innerHTML = `<summary>${esc(title)} <span class="count">(${items.length})</span></summary><ul class="ev-list">${items.map(render).join('') || '<li class="dim">none</li>'}</ul>`;
+  $('#evidence').appendChild(el);
+}
+section('Same name, different files', evidence.sameName, (s) => `<li><code>${esc(s.name)}</code>: ${s.models.map((id) => `${modelLink(id)} <span class="dim mono">${esc(modelById.get(id).file)}</span>`).join('<br>')}</li>`, true);
+section('Models sharing property names', evidence.overlaps, (o) => `<li>${modelLink(o.a)} · ${modelLink(o.b)}<br><span class="mono">${o.shared.map((n) => o.typeDiffers.includes(n) ? `<span class="differs" title="declared with different types">${esc(n)}≠</span>` : esc(n)).join(', ')}</span></li>`, true);
+section('Property names in several models', evidence.sharedProperties, (p) => `<li><code>${esc(p.name)}</code>${p.distinctTypes > 1 ? ` <span class="differs">${p.distinctTypes} different types</span>` : ''}<br>${p.occurrences.map((o) => `${modelLink(o.model)}<span class="mono dim">${o.optional ? '?' : ''}: ${esc(o.type)}</span>`).join('<br>')}</li>`);
+section('Not referenced inside the feature', evidence.unreferenced, (id) => `<li>${modelLink(id)} <span class="dim mono">${esc(modelById.get(id).file)}</span>${modelById.get(id).exported ? '' : ' <span class="dim">not exported</span>'}</li>`);
+
+// ─── Init ────────────────────────────────────────────────────────────────────
+fitView();
+window.addEventListener('resize', () => { if (!selected) fitView(); });
+const initial = decodeURIComponent(location.hash.slice(1));
+if (initial && (modelById.has(initial) || initial.startsWith('files:'))) { select(initial, { scroll: false }); reveal(initial); }
+</script>
+</body>
+</html>

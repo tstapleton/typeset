@@ -1,0 +1,1157 @@
+{
+  "schemaVersion": 1,
+  "featureDir": "src/app/features/orders",
+  "directories": [
+    {
+      "id": "dir:",
+      "path": "",
+      "name": "orders",
+      "parent": null
+    },
+    {
+      "id": "dir:customers",
+      "path": "customers",
+      "name": "customers",
+      "parent": "dir:"
+    },
+    {
+      "id": "dir:data-access",
+      "path": "data-access",
+      "name": "data-access",
+      "parent": "dir:"
+    },
+    {
+      "id": "dir:order-detail",
+      "path": "order-detail",
+      "name": "order-detail",
+      "parent": "dir:"
+    },
+    {
+      "id": "dir:order-detail/summary",
+      "path": "order-detail/summary",
+      "name": "summary",
+      "parent": "dir:order-detail"
+    }
+  ],
+  "files": [
+    {
+      "path": "customers/customer-card.component.ts",
+      "directory": "dir:customers",
+      "models": [],
+      "implementation": true
+    },
+    {
+      "path": "customers/customer.model.ts",
+      "directory": "dir:customers",
+      "models": [
+        "model:customers/customer.model.ts#Address",
+        "model:customers/customer.model.ts#Customer",
+        "model:customers/customer.model.ts#CustomerRef"
+      ],
+      "implementation": false
+    },
+    {
+      "path": "data-access/order-filter.ts",
+      "directory": "dir:data-access",
+      "models": [
+        "model:data-access/order-filter.ts#OrderFilter"
+      ],
+      "implementation": true
+    },
+    {
+      "path": "data-access/orders-api.ts",
+      "directory": "dir:data-access",
+      "models": [
+        "model:data-access/orders-api.ts#OrdersApi"
+      ],
+      "implementation": false
+    },
+    {
+      "path": "data-access/orders.store.ts",
+      "directory": "dir:data-access",
+      "models": [
+        "model:data-access/orders.store.ts#OrdersState"
+      ],
+      "implementation": true
+    },
+    {
+      "path": "index.ts",
+      "directory": "dir:",
+      "models": [],
+      "implementation": false
+    },
+    {
+      "path": "order-detail/order-detail.page.ts",
+      "directory": "dir:order-detail",
+      "models": [
+        "model:order-detail/order-detail.page.ts#LineView"
+      ],
+      "implementation": true
+    },
+    {
+      "path": "order-detail/summary/order-summary.component.ts",
+      "directory": "dir:order-detail/summary",
+      "models": [
+        "model:order-detail/summary/order-summary.component.ts#OrderSummary"
+      ],
+      "implementation": true
+    },
+    {
+      "path": "order-detail/summary/order-summary.model.ts",
+      "directory": "dir:order-detail/summary",
+      "models": [
+        "model:order-detail/summary/order-summary.model.ts#Address"
+      ],
+      "implementation": false
+    },
+    {
+      "path": "orders.models.ts",
+      "directory": "dir:",
+      "models": [
+        "model:orders.models.ts#Money",
+        "model:orders.models.ts#Order",
+        "model:orders.models.ts#OrderLine",
+        "model:orders.models.ts#OrderStatus",
+        "model:orders.models.ts#Page"
+      ],
+      "implementation": false
+    },
+    {
+      "path": "orders.routes.ts",
+      "directory": "dir:",
+      "models": [],
+      "implementation": true
+    }
+  ],
+  "models": [
+    {
+      "id": "model:customers/customer.model.ts#Address",
+      "name": "Address",
+      "exported": true,
+      "directory": "dir:customers",
+      "file": "customers/customer.model.ts",
+      "line": 3,
+      "source": "export interface Address {\n  line1: string;\n  city: string;\n  postcode: string;\n}",
+      "kind": "interface",
+      "typeParameters": [],
+      "extends": [],
+      "members": [
+        {
+          "name": "line1",
+          "kind": "property",
+          "optional": false,
+          "readonly": false,
+          "type": "string",
+          "refs": [],
+          "external": []
+        },
+        {
+          "name": "city",
+          "kind": "property",
+          "optional": false,
+          "readonly": false,
+          "type": "string",
+          "refs": [],
+          "external": []
+        },
+        {
+          "name": "postcode",
+          "kind": "property",
+          "optional": false,
+          "readonly": false,
+          "type": "string",
+          "refs": [],
+          "external": []
+        }
+      ]
+    },
+    {
+      "id": "model:customers/customer.model.ts#Customer",
+      "name": "Customer",
+      "exported": true,
+      "directory": "dir:customers",
+      "file": "customers/customer.model.ts",
+      "line": 9,
+      "source": "export interface Customer {\n  id: string;\n  name: string;\n  email: string;\n  billing: Address;\n  shipping?: Address;\n  account: User;\n}",
+      "kind": "interface",
+      "typeParameters": [],
+      "extends": [],
+      "members": [
+        {
+          "name": "id",
+          "kind": "property",
+          "optional": false,
+          "readonly": false,
+          "type": "string",
+          "refs": [],
+          "external": []
+        },
+        {
+          "name": "name",
+          "kind": "property",
+          "optional": false,
+          "readonly": false,
+          "type": "string",
+          "refs": [],
+          "external": []
+        },
+        {
+          "name": "email",
+          "kind": "property",
+          "optional": false,
+          "readonly": false,
+          "type": "string",
+          "refs": [],
+          "external": []
+        },
+        {
+          "name": "billing",
+          "kind": "property",
+          "optional": false,
+          "readonly": false,
+          "type": "Address",
+          "refs": [
+            {
+              "target": "model:customers/customer.model.ts#Address",
+              "text": "Address",
+              "via": []
+            }
+          ],
+          "external": []
+        },
+        {
+          "name": "shipping",
+          "kind": "property",
+          "optional": true,
+          "readonly": false,
+          "type": "Address",
+          "refs": [
+            {
+              "target": "model:customers/customer.model.ts#Address",
+              "text": "Address",
+              "via": []
+            }
+          ],
+          "external": []
+        },
+        {
+          "name": "account",
+          "kind": "property",
+          "optional": false,
+          "readonly": false,
+          "type": "User",
+          "refs": [],
+          "external": [
+            {
+              "name": "User",
+              "module": "src/app/core/api/user.ts",
+              "inFeature": false,
+              "via": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "model:customers/customer.model.ts#CustomerRef",
+      "name": "CustomerRef",
+      "exported": true,
+      "directory": "dir:customers",
+      "file": "customers/customer.model.ts",
+      "line": 18,
+      "source": "export type CustomerRef = Pick<Customer, 'id' | 'name'>;",
+      "kind": "type",
+      "typeParameters": [],
+      "extends": [],
+      "members": [],
+      "aliasOf": {
+        "type": "Pick<Customer, 'id' | 'name'>",
+        "refs": [
+          {
+            "target": "model:customers/customer.model.ts#Customer",
+            "text": "Customer",
+            "via": [
+              "generic:Pick"
+            ]
+          }
+        ],
+        "external": []
+      }
+    },
+    {
+      "id": "model:data-access/order-filter.ts#OrderFilter",
+      "name": "OrderFilter",
+      "exported": true,
+      "directory": "dir:data-access",
+      "file": "data-access/order-filter.ts",
+      "line": 4,
+      "source": "export type OrderFilter = {\n  status: OrderStatus | 'all';\n  customer?: CustomerRef;\n};",
+      "kind": "type",
+      "typeParameters": [],
+      "extends": [],
+      "members": [
+        {
+          "name": "status",
+          "kind": "property",
+          "optional": false,
+          "readonly": false,
+          "type": "OrderStatus | 'all'",
+          "refs": [
+            {
+              "target": "model:orders.models.ts#OrderStatus",
+              "text": "OrderStatus",
+              "via": [
+                "union"
+              ]
+            }
+          ],
+          "external": []
+        },
+        {
+          "name": "customer",
+          "kind": "property",
+          "optional": true,
+          "readonly": false,
+          "type": "CustomerRef",
+          "refs": [
+            {
+              "target": "model:customers/customer.model.ts#CustomerRef",
+              "text": "CustomerRef",
+              "via": []
+            }
+          ],
+          "external": []
+        }
+      ]
+    },
+    {
+      "id": "model:data-access/orders-api.ts#OrdersApi",
+      "name": "OrdersApi",
+      "exported": true,
+      "directory": "dir:data-access",
+      "file": "data-access/orders-api.ts",
+      "line": 4,
+      "source": "export interface OrdersApi {\n  list(filter: OrderFilter, page: number): Promise<Page<Order>>;\n  get(id: string): Promise<Order>;\n}",
+      "kind": "interface",
+      "typeParameters": [],
+      "extends": [],
+      "members": [
+        {
+          "name": "list",
+          "kind": "method",
+          "optional": false,
+          "readonly": false,
+          "type": "(filter: OrderFilter, page: number): Promise<Page<Order>>",
+          "refs": [
+            {
+              "target": "model:data-access/order-filter.ts#OrderFilter",
+              "text": "OrderFilter",
+              "via": [
+                "function"
+              ]
+            },
+            {
+              "target": "model:orders.models.ts#Page",
+              "text": "Page",
+              "via": [
+                "function",
+                "generic:Promise"
+              ]
+            },
+            {
+              "target": "model:orders.models.ts#Order",
+              "text": "Order",
+              "via": [
+                "function",
+                "generic:Promise",
+                "generic:Page"
+              ]
+            }
+          ],
+          "external": []
+        },
+        {
+          "name": "get",
+          "kind": "method",
+          "optional": false,
+          "readonly": false,
+          "type": "(id: string): Promise<Order>",
+          "refs": [
+            {
+              "target": "model:orders.models.ts#Order",
+              "text": "Order",
+              "via": [
+                "function",
+                "generic:Promise"
+              ]
+            }
+          ],
+          "external": []
+        }
+      ]
+    },
+    {
+      "id": "model:data-access/orders.store.ts#OrdersState",
+      "name": "OrdersState",
+      "exported": false,
+      "directory": "dir:data-access",
+      "file": "data-access/orders.store.ts",
+      "line": 6,
+      "source": "interface OrdersState {\n  page: models.Page<models.Order>;\n  selectedId: string | null;\n  filter: OrderFilter;\n  loading: boolean;\n}",
+      "kind": "interface",
+      "typeParameters": [],
+      "extends": [],
+      "members": [
+        {
+          "name": "page",
+          "kind": "property",
+          "optional": false,
+          "readonly": false,
+          "type": "models.Page<models.Order>",
+          "refs": [
+            {
+              "target": "model:orders.models.ts#Page",
+              "text": "models.Page",
+              "via": []
+            },
+            {
+              "target": "model:orders.models.ts#Order",
+              "text": "models.Order",
+              "via": [
+                "generic:models.Page"
+              ]
+            }
+          ],
+          "external": []
+        },
+        {
+          "name": "selectedId",
+          "kind": "property",
+          "optional": false,
+          "readonly": false,
+          "type": "string | null",
+          "refs": [],
+          "external": []
+        },
+        {
+          "name": "filter",
+          "kind": "property",
+          "optional": false,
+          "readonly": false,
+          "type": "OrderFilter",
+          "refs": [
+            {
+              "target": "model:data-access/order-filter.ts#OrderFilter",
+              "text": "OrderFilter",
+              "via": []
+            }
+          ],
+          "external": []
+        },
+        {
+          "name": "loading",
+          "kind": "property",
+          "optional": false,
+          "readonly": false,
+          "type": "boolean",
+          "refs": [],
+          "external": []
+        }
+      ]
+    },
+    {
+      "id": "model:order-detail/order-detail.page.ts#LineView",
+      "name": "LineView",
+      "exported": false,
+      "directory": "dir:order-detail",
+      "file": "order-detail/order-detail.page.ts",
+      "line": 4,
+      "source": "interface LineView {\n  line: OrderLine;\n  total: Money;\n}",
+      "kind": "interface",
+      "typeParameters": [],
+      "extends": [],
+      "members": [
+        {
+          "name": "line",
+          "kind": "property",
+          "optional": false,
+          "readonly": false,
+          "type": "OrderLine",
+          "refs": [
+            {
+              "target": "model:orders.models.ts#OrderLine",
+              "text": "OrderLine",
+              "via": []
+            }
+          ],
+          "external": []
+        },
+        {
+          "name": "total",
+          "kind": "property",
+          "optional": false,
+          "readonly": false,
+          "type": "Money",
+          "refs": [
+            {
+              "target": "model:orders.models.ts#Money",
+              "text": "Money",
+              "via": []
+            }
+          ],
+          "external": []
+        }
+      ]
+    },
+    {
+      "id": "model:order-detail/summary/order-summary.component.ts#OrderSummary",
+      "name": "OrderSummary",
+      "exported": true,
+      "directory": "dir:order-detail/summary",
+      "file": "order-detail/summary/order-summary.component.ts",
+      "line": 5,
+      "source": "/** What the summary shows. Overlaps Order, but `status` is a plain string here. */\nexport interface OrderSummary {\n  id: string;\n  status: string;\n  total: Money;\n  customerName: string;\n}",
+      "doc": "What the summary shows. Overlaps Order, but `status` is a plain string here.",
+      "kind": "interface",
+      "typeParameters": [],
+      "extends": [],
+      "members": [
+        {
+          "name": "id",
+          "kind": "property",
+          "optional": false,
+          "readonly": false,
+          "type": "string",
+          "refs": [],
+          "external": []
+        },
+        {
+          "name": "status",
+          "kind": "property",
+          "optional": false,
+          "readonly": false,
+          "type": "string",
+          "refs": [],
+          "external": []
+        },
+        {
+          "name": "total",
+          "kind": "property",
+          "optional": false,
+          "readonly": false,
+          "type": "Money",
+          "refs": [
+            {
+              "target": "model:orders.models.ts#Money",
+              "text": "Money",
+              "via": []
+            }
+          ],
+          "external": []
+        },
+        {
+          "name": "customerName",
+          "kind": "property",
+          "optional": false,
+          "readonly": false,
+          "type": "string",
+          "refs": [],
+          "external": []
+        }
+      ]
+    },
+    {
+      "id": "model:order-detail/summary/order-summary.model.ts#Address",
+      "name": "Address",
+      "exported": true,
+      "directory": "dir:order-detail/summary",
+      "file": "order-detail/summary/order-summary.model.ts",
+      "line": 1,
+      "source": "export interface Address {\n  street: string;\n  city: string;\n  zip: string;\n}",
+      "kind": "interface",
+      "typeParameters": [],
+      "extends": [],
+      "members": [
+        {
+          "name": "street",
+          "kind": "property",
+          "optional": false,
+          "readonly": false,
+          "type": "string",
+          "refs": [],
+          "external": []
+        },
+        {
+          "name": "city",
+          "kind": "property",
+          "optional": false,
+          "readonly": false,
+          "type": "string",
+          "refs": [],
+          "external": []
+        },
+        {
+          "name": "zip",
+          "kind": "property",
+          "optional": false,
+          "readonly": false,
+          "type": "string",
+          "refs": [],
+          "external": []
+        }
+      ]
+    },
+    {
+      "id": "model:orders.models.ts#Money",
+      "name": "Money",
+      "exported": true,
+      "directory": "dir:",
+      "file": "orders.models.ts",
+      "line": 10,
+      "source": "export type Money = { amount: number; currency: Currency };",
+      "kind": "type",
+      "typeParameters": [],
+      "extends": [],
+      "members": [
+        {
+          "name": "amount",
+          "kind": "property",
+          "optional": false,
+          "readonly": false,
+          "type": "number",
+          "refs": [],
+          "external": []
+        },
+        {
+          "name": "currency",
+          "kind": "property",
+          "optional": false,
+          "readonly": false,
+          "type": "Currency",
+          "refs": [],
+          "external": [
+            {
+              "name": "Currency",
+              "module": "src/app/core/api/user.ts",
+              "inFeature": false,
+              "via": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "model:orders.models.ts#Order",
+      "name": "Order",
+      "exported": true,
+      "directory": "dir:",
+      "file": "orders.models.ts",
+      "line": 19,
+      "source": "/** An order as the API returns it. */\nexport interface Order {\n  readonly id: string;\n  status: OrderStatus;\n  customer: CustomerRef;\n  lines: OrderLine[];\n  /** Keyed by SKU. */\n  discounts?: Record<string, Money>;\n  placedAt: string | null;\n}",
+      "doc": "An order as the API returns it.",
+      "kind": "interface",
+      "typeParameters": [],
+      "extends": [],
+      "members": [
+        {
+          "name": "id",
+          "kind": "property",
+          "optional": false,
+          "readonly": true,
+          "type": "string",
+          "refs": [],
+          "external": []
+        },
+        {
+          "name": "status",
+          "kind": "property",
+          "optional": false,
+          "readonly": false,
+          "type": "OrderStatus",
+          "refs": [
+            {
+              "target": "model:orders.models.ts#OrderStatus",
+              "text": "OrderStatus",
+              "via": []
+            }
+          ],
+          "external": []
+        },
+        {
+          "name": "customer",
+          "kind": "property",
+          "optional": false,
+          "readonly": false,
+          "type": "CustomerRef",
+          "refs": [
+            {
+              "target": "model:customers/customer.model.ts#CustomerRef",
+              "text": "CustomerRef",
+              "via": []
+            }
+          ],
+          "external": []
+        },
+        {
+          "name": "lines",
+          "kind": "property",
+          "optional": false,
+          "readonly": false,
+          "type": "OrderLine[]",
+          "refs": [
+            {
+              "target": "model:orders.models.ts#OrderLine",
+              "text": "OrderLine",
+              "via": [
+                "array"
+              ]
+            }
+          ],
+          "external": []
+        },
+        {
+          "name": "discounts",
+          "kind": "property",
+          "optional": true,
+          "readonly": false,
+          "type": "Record<string, Money>",
+          "refs": [
+            {
+              "target": "model:orders.models.ts#Money",
+              "text": "Money",
+              "via": [
+                "generic:Record"
+              ]
+            }
+          ],
+          "external": [],
+          "doc": "Keyed by SKU."
+        },
+        {
+          "name": "placedAt",
+          "kind": "property",
+          "optional": false,
+          "readonly": false,
+          "type": "string | null",
+          "refs": [],
+          "external": []
+        }
+      ]
+    },
+    {
+      "id": "model:orders.models.ts#OrderLine",
+      "name": "OrderLine",
+      "exported": true,
+      "directory": "dir:",
+      "file": "orders.models.ts",
+      "line": 12,
+      "source": "export interface OrderLine {\n  sku: string;\n  quantity: number;\n  price: Money;\n}",
+      "kind": "interface",
+      "typeParameters": [],
+      "extends": [],
+      "members": [
+        {
+          "name": "sku",
+          "kind": "property",
+          "optional": false,
+          "readonly": false,
+          "type": "string",
+          "refs": [],
+          "external": []
+        },
+        {
+          "name": "quantity",
+          "kind": "property",
+          "optional": false,
+          "readonly": false,
+          "type": "number",
+          "refs": [],
+          "external": []
+        },
+        {
+          "name": "price",
+          "kind": "property",
+          "optional": false,
+          "readonly": false,
+          "type": "Money",
+          "refs": [
+            {
+              "target": "model:orders.models.ts#Money",
+              "text": "Money",
+              "via": []
+            }
+          ],
+          "external": []
+        }
+      ]
+    },
+    {
+      "id": "model:orders.models.ts#OrderStatus",
+      "name": "OrderStatus",
+      "exported": true,
+      "directory": "dir:",
+      "file": "orders.models.ts",
+      "line": 4,
+      "source": "export enum OrderStatus {\n  Draft = 'draft',\n  Placed = 'placed',\n  Shipped = 'shipped',\n}",
+      "kind": "enum",
+      "typeParameters": [],
+      "extends": [],
+      "members": [
+        {
+          "name": "Draft",
+          "kind": "enum-member",
+          "optional": false,
+          "readonly": true,
+          "type": "'draft'",
+          "refs": [],
+          "external": []
+        },
+        {
+          "name": "Placed",
+          "kind": "enum-member",
+          "optional": false,
+          "readonly": true,
+          "type": "'placed'",
+          "refs": [],
+          "external": []
+        },
+        {
+          "name": "Shipped",
+          "kind": "enum-member",
+          "optional": false,
+          "readonly": true,
+          "type": "'shipped'",
+          "refs": [],
+          "external": []
+        }
+      ]
+    },
+    {
+      "id": "model:orders.models.ts#Page",
+      "name": "Page",
+      "exported": true,
+      "directory": "dir:",
+      "file": "orders.models.ts",
+      "line": 29,
+      "source": "export interface Page<T> {\n  items: T[];\n  total: number;\n}",
+      "kind": "interface",
+      "typeParameters": [
+        "T"
+      ],
+      "extends": [],
+      "members": [
+        {
+          "name": "items",
+          "kind": "property",
+          "optional": false,
+          "readonly": false,
+          "type": "T[]",
+          "refs": [],
+          "external": []
+        },
+        {
+          "name": "total",
+          "kind": "property",
+          "optional": false,
+          "readonly": false,
+          "type": "number",
+          "refs": [],
+          "external": []
+        }
+      ]
+    }
+  ],
+  "relations": [
+    {
+      "id": "rel:model:customers/customer.model.ts#Customer->model:customers/customer.model.ts#Address@billing",
+      "from": "model:customers/customer.model.ts#Customer",
+      "to": "model:customers/customer.model.ts#Address",
+      "kind": "property",
+      "member": "billing",
+      "via": []
+    },
+    {
+      "id": "rel:model:customers/customer.model.ts#Customer->model:customers/customer.model.ts#Address@shipping",
+      "from": "model:customers/customer.model.ts#Customer",
+      "to": "model:customers/customer.model.ts#Address",
+      "kind": "property",
+      "member": "shipping",
+      "via": []
+    },
+    {
+      "id": "rel:model:customers/customer.model.ts#CustomerRef->model:customers/customer.model.ts#Customer@alias",
+      "from": "model:customers/customer.model.ts#CustomerRef",
+      "to": "model:customers/customer.model.ts#Customer",
+      "kind": "alias",
+      "via": [
+        "generic:Pick"
+      ]
+    },
+    {
+      "id": "rel:model:data-access/order-filter.ts#OrderFilter->model:customers/customer.model.ts#CustomerRef@customer",
+      "from": "model:data-access/order-filter.ts#OrderFilter",
+      "to": "model:customers/customer.model.ts#CustomerRef",
+      "kind": "property",
+      "member": "customer",
+      "via": []
+    },
+    {
+      "id": "rel:model:data-access/order-filter.ts#OrderFilter->model:orders.models.ts#OrderStatus@status",
+      "from": "model:data-access/order-filter.ts#OrderFilter",
+      "to": "model:orders.models.ts#OrderStatus",
+      "kind": "property",
+      "member": "status",
+      "via": [
+        "union"
+      ]
+    },
+    {
+      "id": "rel:model:data-access/orders-api.ts#OrdersApi->model:data-access/order-filter.ts#OrderFilter@list",
+      "from": "model:data-access/orders-api.ts#OrdersApi",
+      "to": "model:data-access/order-filter.ts#OrderFilter",
+      "kind": "property",
+      "member": "list",
+      "via": [
+        "function"
+      ]
+    },
+    {
+      "id": "rel:model:data-access/orders-api.ts#OrdersApi->model:orders.models.ts#Order@get",
+      "from": "model:data-access/orders-api.ts#OrdersApi",
+      "to": "model:orders.models.ts#Order",
+      "kind": "property",
+      "member": "get",
+      "via": [
+        "function",
+        "generic:Promise"
+      ]
+    },
+    {
+      "id": "rel:model:data-access/orders-api.ts#OrdersApi->model:orders.models.ts#Order@list",
+      "from": "model:data-access/orders-api.ts#OrdersApi",
+      "to": "model:orders.models.ts#Order",
+      "kind": "property",
+      "member": "list",
+      "via": [
+        "function",
+        "generic:Promise",
+        "generic:Page"
+      ]
+    },
+    {
+      "id": "rel:model:data-access/orders-api.ts#OrdersApi->model:orders.models.ts#Page@list",
+      "from": "model:data-access/orders-api.ts#OrdersApi",
+      "to": "model:orders.models.ts#Page",
+      "kind": "property",
+      "member": "list",
+      "via": [
+        "function",
+        "generic:Promise"
+      ]
+    },
+    {
+      "id": "rel:model:data-access/orders.store.ts#OrdersState->model:data-access/order-filter.ts#OrderFilter@filter",
+      "from": "model:data-access/orders.store.ts#OrdersState",
+      "to": "model:data-access/order-filter.ts#OrderFilter",
+      "kind": "property",
+      "member": "filter",
+      "via": []
+    },
+    {
+      "id": "rel:model:data-access/orders.store.ts#OrdersState->model:orders.models.ts#Order@page",
+      "from": "model:data-access/orders.store.ts#OrdersState",
+      "to": "model:orders.models.ts#Order",
+      "kind": "property",
+      "member": "page",
+      "via": [
+        "generic:models.Page"
+      ]
+    },
+    {
+      "id": "rel:model:data-access/orders.store.ts#OrdersState->model:orders.models.ts#Page@page",
+      "from": "model:data-access/orders.store.ts#OrdersState",
+      "to": "model:orders.models.ts#Page",
+      "kind": "property",
+      "member": "page",
+      "via": []
+    },
+    {
+      "id": "rel:model:order-detail/order-detail.page.ts#LineView->model:orders.models.ts#Money@total",
+      "from": "model:order-detail/order-detail.page.ts#LineView",
+      "to": "model:orders.models.ts#Money",
+      "kind": "property",
+      "member": "total",
+      "via": []
+    },
+    {
+      "id": "rel:model:order-detail/order-detail.page.ts#LineView->model:orders.models.ts#OrderLine@line",
+      "from": "model:order-detail/order-detail.page.ts#LineView",
+      "to": "model:orders.models.ts#OrderLine",
+      "kind": "property",
+      "member": "line",
+      "via": []
+    },
+    {
+      "id": "rel:model:order-detail/summary/order-summary.component.ts#OrderSummary->model:orders.models.ts#Money@total",
+      "from": "model:order-detail/summary/order-summary.component.ts#OrderSummary",
+      "to": "model:orders.models.ts#Money",
+      "kind": "property",
+      "member": "total",
+      "via": []
+    },
+    {
+      "id": "rel:model:orders.models.ts#Order->model:customers/customer.model.ts#CustomerRef@customer",
+      "from": "model:orders.models.ts#Order",
+      "to": "model:customers/customer.model.ts#CustomerRef",
+      "kind": "property",
+      "member": "customer",
+      "via": []
+    },
+    {
+      "id": "rel:model:orders.models.ts#Order->model:orders.models.ts#Money@discounts",
+      "from": "model:orders.models.ts#Order",
+      "to": "model:orders.models.ts#Money",
+      "kind": "property",
+      "member": "discounts",
+      "via": [
+        "generic:Record"
+      ]
+    },
+    {
+      "id": "rel:model:orders.models.ts#Order->model:orders.models.ts#OrderLine@lines",
+      "from": "model:orders.models.ts#Order",
+      "to": "model:orders.models.ts#OrderLine",
+      "kind": "property",
+      "member": "lines",
+      "via": [
+        "array"
+      ]
+    },
+    {
+      "id": "rel:model:orders.models.ts#Order->model:orders.models.ts#OrderStatus@status",
+      "from": "model:orders.models.ts#Order",
+      "to": "model:orders.models.ts#OrderStatus",
+      "kind": "property",
+      "member": "status",
+      "via": []
+    },
+    {
+      "id": "rel:model:orders.models.ts#OrderLine->model:orders.models.ts#Money@price",
+      "from": "model:orders.models.ts#OrderLine",
+      "to": "model:orders.models.ts#Money",
+      "kind": "property",
+      "member": "price",
+      "via": []
+    }
+  ],
+  "usages": [
+    {
+      "id": "use:model:customers/customer.model.ts#Customer->dir:customers",
+      "model": "model:customers/customer.model.ts#Customer",
+      "directory": "dir:customers",
+      "sites": [
+        {
+          "file": "customers/customer-card.component.ts",
+          "count": 1,
+          "via": "import"
+        }
+      ]
+    },
+    {
+      "id": "use:model:data-access/order-filter.ts#OrderFilter->dir:data-access",
+      "model": "model:data-access/order-filter.ts#OrderFilter",
+      "directory": "dir:data-access",
+      "sites": [
+        {
+          "file": "data-access/order-filter.ts",
+          "count": 1,
+          "via": "local"
+        }
+      ]
+    },
+    {
+      "id": "use:model:data-access/orders-api.ts#OrdersApi->dir:data-access",
+      "model": "model:data-access/orders-api.ts#OrdersApi",
+      "directory": "dir:data-access",
+      "sites": [
+        {
+          "file": "data-access/orders.store.ts",
+          "count": 1,
+          "via": "import"
+        }
+      ]
+    },
+    {
+      "id": "use:model:data-access/orders.store.ts#OrdersState->dir:data-access",
+      "model": "model:data-access/orders.store.ts#OrdersState",
+      "directory": "dir:data-access",
+      "sites": [
+        {
+          "file": "data-access/orders.store.ts",
+          "count": 1,
+          "via": "local"
+        }
+      ]
+    },
+    {
+      "id": "use:model:order-detail/order-detail.page.ts#LineView->dir:order-detail",
+      "model": "model:order-detail/order-detail.page.ts#LineView",
+      "directory": "dir:order-detail",
+      "sites": [
+        {
+          "file": "order-detail/order-detail.page.ts",
+          "count": 1,
+          "via": "local"
+        }
+      ]
+    },
+    {
+      "id": "use:model:order-detail/summary/order-summary.component.ts#OrderSummary->dir:order-detail/summary",
+      "model": "model:order-detail/summary/order-summary.component.ts#OrderSummary",
+      "directory": "dir:order-detail/summary",
+      "sites": [
+        {
+          "file": "order-detail/summary/order-summary.component.ts",
+          "count": 1,
+          "via": "local"
+        }
+      ]
+    },
+    {
+      "id": "use:model:orders.models.ts#Order->dir:data-access",
+      "model": "model:orders.models.ts#Order",
+      "directory": "dir:data-access",
+      "sites": [
+        {
+          "file": "data-access/orders.store.ts",
+          "count": 1,
+          "via": "import"
+        }
+      ]
+    },
+    {
+      "id": "use:model:orders.models.ts#Order->dir:order-detail",
+      "model": "model:orders.models.ts#Order",
+      "directory": "dir:order-detail",
+      "sites": [
+        {
+          "file": "order-detail/order-detail.page.ts",
+          "count": 1,
+          "via": "import"
+        }
+      ]
+    },
+    {
+      "id": "use:model:orders.models.ts#OrderStatus->dir:data-access",
+      "model": "model:orders.models.ts#OrderStatus",
+      "directory": "dir:data-access",
+      "sites": [
+        {
+          "file": "data-access/orders.store.ts",
+          "count": 1,
+          "via": "import"
+        }
+      ]
+    }
+  ]
+}

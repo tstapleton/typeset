@@ -1,0 +1,42 @@
+{
+	"name": "typeset",
+	"version": "0.1.0",
+	"description": "Diagram the TypeScript models (interfaces, type aliases, enums) in an Angular feature directory, grouped by directory",
+	"type": "module",
+	"bin": {
+		"typeset": "dist/cli.js"
+	},
+	"scripts": {
+		"build": "tsc",
+		"start": "node dist/cli.js",
+		"test": "vitest run",
+		"test:watch": "vitest",
+		"lint": "biome lint",
+		"lint:fix": "biome lint --write --unsafe",
+		"format": "biome format --write",
+		"check:fallow": "fallow audit --type-aware",
+		"diagram:fixture": "node dist/cli.js --repo-root fixtures/feature-app --out-dir dist/fixture src/app/features/orders",
+		"docs:sample:generate": "node dist/cli.js --repo-root fixtures/feature-app --out-dir docs/sample src/app/features/orders",
+		"docs:sample:check-drift": "node dist/cli.js --repo-root fixtures/feature-app --out-dir dist/sample-check src/app/features/orders && (diff -r docs/sample dist/sample-check || (echo 'docs/sample is stale: run npm run docs:sample:generate and commit the result' >&2 && exit 1))",
+		"verify": "npm run build && biome check && npm run check:fallow && npm run test && npm run docs:sample:check-drift",
+		"prepare": "husky"
+	},
+	"dependencies": {
+		"elkjs": "0.11.1",
+		"ts-morph": "28.0.0"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "2.5.0",
+		"@tsconfig/node26": "26.0.0",
+		"@types/node": "25.9.3",
+		"fallow": "3.26.0",
+		"happy-dom": "20.10.6",
+		"husky": "9.1.7",
+		"typescript": "6.0.3",
+		"vitest": "3.2.7"
+	},
+	"allowScripts": {
+		"esbuild@0.28.2": true,
+		"fsevents@2.3.3": true
+	}
+}

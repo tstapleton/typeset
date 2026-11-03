@@ -1,0 +1,13 @@
+{
+  "compilerOptions": {
+    "strict": true,
+    "experimentalDecorators": true,
+    "target": "ES2022",
+    "module": "preserve",
+    "baseUrl": ".",
+    "paths": {
+      "@core/*": ["src/app/core/*"]
+    }
+  },
+  "files": []
+}

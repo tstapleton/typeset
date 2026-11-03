@@ -1,0 +1,26 @@
+name: Diagram
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: diagram-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  diagram:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - name: Diagram typeset's own source
+        uses: ./
+        with:
+          feature-dir: src
+      - name: Diagram the fixture feature
+        uses: ./
+        with:
+          feature-dir: src/app/features/orders
+          repo-root: fixtures/feature-app

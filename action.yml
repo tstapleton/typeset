@@ -1,0 +1,76 @@
+name: typeset
+description: Diagram the TypeScript models in a feature directory and upload it as a self-contained HTML artifact
+inputs:
+  feature-dir:
+    description: Feature directory to diagram, relative to repo-root
+    required: true
+  repo-root:
+    description: Repo root of the code to analyze
+    default: ${{ github.workspace }}
+  tsconfig:
+    description: tsconfig for module resolution (default: nearest tsconfig.json from feature-dir up to repo-root)
+    default: ""
+outputs:
+  artifact-url:
+    description: URL of the uploaded index.html artifact
+    value: ${{ steps.upload.outputs.artifact-url }}
+runs:
+  using: composite
+  steps:
+    - name: Read node version from .nvmrc
+      id: node-version
+      shell: bash
+      # setup-node resolves node-version-file relative to the workspace, not the
+      # action path, so the version is read here and passed as node-version.
+      run: echo "version=$(cat "${{ github.action_path }}/.nvmrc")" >> "$GITHUB_OUTPUT"
+    - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+      with:
+        node-version: ${{ steps.node-version.outputs.version }}
+    - name: Install and build typeset
+      shell: bash
+      working-directory: ${{ github.action_path }}
+      env:
+        HUSKY: "0"
+      run: |
+        npm ci --no-audit --no-fund
+        npm run build
+    - name: Generate diagram
+      id: generate
+      shell: bash
+      env:
+        FEATURE_DIR: ${{ inputs.feature-dir }}
+        REPO_ROOT: ${{ inputs.repo-root }}
+        TSCONFIG: ${{ inputs.tsconfig }}
+      run: |
+        slug="${FEATURE_DIR//[^a-zA-Z0-9]/-}"
+        out="$RUNNER_TEMP/typeset/$slug"
+        node "${{ github.action_path }}/dist/cli.js" \
+          --repo-root "$REPO_ROOT" \
+          --out-dir "$out" \
+          ${TSCONFIG:+--tsconfig "$TSCONFIG"} \
+          "$FEATURE_DIR"
+        # With archive: false the artifact is named after the file's basename,
+        # so the staged copy must be unique when the action runs twice per job.
+        staged="$out/typeset-$slug.html"
+        cp "$out/index.html" "$staged"
+        echo "html=$staged" >> "$GITHUB_OUTPUT"
+        echo "graph=$out/graph.json" >> "$GITHUB_OUTPUT"
+    - name: Upload diagram artifact
+      id: upload
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      with:
+        path: ${{ steps.generate.outputs.html }}
+        archive: false
+        overwrite: true
+    - name: Write job summary
+      shell: bash
+      env:
+        GRAPH_JSON: ${{ steps.generate.outputs.graph }}
+        ARTIFACT_URL: ${{ steps.upload.outputs.artifact-url }}
+      run: |
+        node -e '
+          const g = require(process.env.GRAPH_JSON);
+          console.log(`### Typeset: \`${g.featureDir}\`\n`);
+          console.log(`${g.models.length} models in ${g.directories.length} directories, ${g.relations.length} model references, ${g.usages.length} directory usages.\n`);
+          console.log(`[Open the diagram](${process.env.ARTIFACT_URL})`);
+        ' >> "$GITHUB_STEP_SUMMARY"
