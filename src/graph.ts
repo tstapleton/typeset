@@ -287,3 +287,72 @@ export function directoryImports(graph: ModelGraph): DirectoryImports[] {
 			(x, y) => y.total - x.total || compareStrings(x.directory, y.directory),
 		);
 }
+
+/** One top-level directory's use of a model defined in another top-level directory. */
+export interface CrossDirectoryUse {
+	model: string;
+	/** The top-level directory using the model. */
+	directory: string;
+	/** Implementation files there that use the model. */
+	files: Array<{ file: string; count: number }>;
+	/** Model members there that reference the model. */
+	references: Array<{ model: string; member?: string }>;
+	/** How many files and distinct models there use the model. */
+	users: number;
+}
+
+/**
+ * Sorted by model, then directory. Unlike `outsideUse`, the feature root takes
+ * no part: its models aren't listed and its code and models don't count.
+ */
+export function crossDirectoryUse(graph: ModelGraph): CrossDirectoryUse[] {
+	const ROOT = "dir:";
+	const homes = new Map(
+		graph.models.map((m) => [m.id, topLevelDir(m.directory)]),
+	);
+	const out = new Map<string, CrossDirectoryUse>();
+	const entry = (
+		model: string,
+		directory: string,
+	): CrossDirectoryUse | undefined => {
+		const home = homes.get(model);
+		if (home === undefined || home === ROOT) return undefined;
+		if (directory === ROOT || directory === home) return undefined;
+		const key = `${model}->${directory}`;
+		const use = out.get(key) ?? {
+			model,
+			directory,
+			files: [],
+			references: [],
+			users: 0,
+		};
+		out.set(key, use);
+		return use;
+	};
+	for (const u of graph.usages)
+		entry(u.model, topLevelDir(u.directory))?.files.push(
+			...u.sites.map((s) => ({ file: s.file, count: s.count })),
+		);
+	for (const r of graph.relations)
+		entry(r.to, homes.get(r.from) ?? ROOT)?.references.push({
+			model: r.from,
+			...(r.member === undefined ? {} : { member: r.member }),
+		});
+	return [...out.values()]
+		.map((use) => ({
+			...use,
+			files: use.files.sort((a, b) => compareStrings(a.file, b.file)),
+			references: use.references.sort(
+				(a, b) =>
+					compareStrings(a.model, b.model) ||
+					compareStrings(a.member ?? "", b.member ?? ""),
+			),
+			users:
+				use.files.length + new Set(use.references.map((r) => r.model)).size,
+		}))
+		.sort(
+			(a, b) =>
+				compareStrings(a.model, b.model) ||
+				compareStrings(a.directory, b.directory),
+		);
+}

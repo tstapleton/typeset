@@ -71,6 +71,14 @@ directly below the feature into one box, so you see only the connections between
   with other top-level directories, and the **external models used** from them.
 - Click a line to list those models, or a box to see everything it uses and what uses it.
 
+The **Shared** view keeps only the models defined in a directory directly below the feature
+and used from another one:
+
+- Each line runs from a model to a directory that uses it. Its number and thickness show how
+  many files and models there use it. Click it to list them.
+- Subdirectories count as part of their top-level directory. Use within a model's own
+  directory and anything at the feature root are left out.
+
 In the Models view:
 
 - Directory boxes nest the way the folders do. Models at the feature root sit directly in

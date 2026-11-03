@@ -60,7 +60,8 @@ export interface Layout {
 const DIR_LABEL_H = 26;
 const MARGIN = 16;
 
-const portId = (card: string, name: string): string => `${card}::${name}`;
+export const portId = (card: string, name: string): string =>
+	`${card}::${name}`;
 
 const IN_PORT_INSET = 10;
 const IN_PORT_STEP = 10;
@@ -116,7 +117,7 @@ type LayoutEdgeInput = ElkExtendedEdge & {
 	to: string;
 };
 
-interface Cards {
+export interface Cards {
 	models: Map<string, ModelCard>;
 	files: Map<string, FilesCard>;
 }
@@ -256,7 +257,7 @@ function drawnDirectories(
  * here sits inside a directory, so they must be set on every container.
  * `considerModelOrder` must stay off: on compound nodes it makes ELK throw.
  */
-const LAYERED_OPTIONS = {
+export const LAYERED_OPTIONS = {
 	"elk.direction": "RIGHT",
 	"elk.edgeRouting": "ORTHOGONAL",
 	"elk.layered.spacing.nodeNodeBetweenLayers": "56",
@@ -268,16 +269,16 @@ const LAYERED_OPTIONS = {
 	"elk.layered.nodePlacement.strategy": "NETWORK_SIMPLEX",
 };
 
-const CONTAINER_OPTIONS = {
-	...LAYERED_OPTIONS,
-	"elk.padding": `[top=${DIR_LABEL_H + 12}, left=14, bottom=14, right=14]`,
-};
+export const DIR_PADDING = `[top=${DIR_LABEL_H + 12}, left=14, bottom=14, right=14]`;
+export const ROOT_PADDING = `[top=${MARGIN}, left=${MARGIN}, bottom=${MARGIN}, right=${MARGIN}]`;
+
+const CONTAINER_OPTIONS = { ...LAYERED_OPTIONS, "elk.padding": DIR_PADDING };
 
 const ROOT_OPTIONS = {
 	...LAYERED_OPTIONS,
 	"elk.algorithm": "layered",
 	"elk.hierarchyHandling": "INCLUDE_CHILDREN",
-	"elk.padding": `[top=${MARGIN}, left=${MARGIN}, bottom=${MARGIN}, right=${MARGIN}]`,
+	"elk.padding": ROOT_PADDING,
 };
 
 function elkGraph(
@@ -311,14 +312,12 @@ function elkGraph(
 	};
 }
 
-const ROOT_ID = "__root__";
+export const ROOT_ID = "__root__";
 
 /** Walks ELK's result, converting parent-relative positions to absolute ones. */
-class Placer {
+export class Placer {
 	readonly layout: Layout;
-	private readonly absolute = new Map<string, Point>([
-		[ROOT_ID, { x: 0, y: 0 }],
-	]);
+	readonly absolute = new Map<string, Point>([[ROOT_ID, { x: 0, y: 0 }]]);
 	private readonly dirById: Map<string, ModelGraph["directories"][number]>;
 
 	constructor(

@@ -1,4 +1,6 @@
 import { Component, computed, input } from '@angular/core';
+import type { CustomerRef } from '../customers/customer.model';
+import { ALL_ORDERS, type OrderFilter } from '../data-access/order-filter';
 import type { Money, Order, OrderLine } from '../orders.models';
 
 interface LineView {
@@ -14,6 +16,8 @@ interface LineView {
 })
 export class OrderDetailPage {
   readonly order = input.required<Order>();
+  readonly customer = input<CustomerRef>();
+  readonly filter = input<OrderFilter>(ALL_ORDERS);
   readonly rows = computed<LineView[]>(() =>
     this.order().lines.map((line) => ({
       line,

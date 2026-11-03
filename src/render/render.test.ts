@@ -13,6 +13,7 @@ import {
 } from "./directories.js";
 import { buildHtml } from "./html.js";
 import { computeLayout, type Point } from "./layout.js";
+import { computeSharedLayout, renderSharedSvg } from "./shared.js";
 import { renderSvg } from "./svg.js";
 
 const FIXTURE = new URL("../../fixtures/feature-app", import.meta.url).pathname;
@@ -163,28 +164,31 @@ describe("directory view", async () => {
 			layout.boxes.map((b) => [b.id, b.defined, b.shared, b.used]),
 		).toEqual([
 			["dir:", 5, 5, 1],
-			["dir:customers", 3, 1, 0],
-			["dir:data-access", 3, 0, 4],
-			["dir:order-detail", 3, 0, 3],
+			["dir:customers", 4, 1, 1],
+			["dir:data-access", 3, 1, 4],
+			["dir:order-detail", 3, 0, 5],
 		]);
 		const texts = [
 			...doc.querySelectorAll('[data-dir="dir:customers"] .dir-box-count'),
 		].map((t) => t.textContent);
 		expect(texts).toEqual([
-			"3 models defined",
+			"4 models defined",
 			"1 model shared",
-			"0 external models used",
+			"1 external model used",
 		]);
 		expect(doc.querySelectorAll(".dir-box").length).toBe(layout.boxes.length);
 	});
 
 	it("draws one line per direction, labelled with its distinct models", () => {
-		expect(layout.lines.map((l) => [l.from, l.to, l.models]).sort()).toEqual(
+		expect(layout.lines.map((l) => [l.from, l.to, l.count]).sort()).toEqual(
 			[
 				["dir:", "dir:customers", 1],
+				["dir:customers", "dir:data-access", 1],
 				["dir:data-access", "dir:", 3],
 				["dir:data-access", "dir:customers", 1],
 				["dir:order-detail", "dir:", 3],
+				["dir:order-detail", "dir:customers", 1],
+				["dir:order-detail", "dir:data-access", 1],
 			].sort(),
 		);
 		for (const l of layout.lines)
@@ -192,7 +196,7 @@ describe("directory view", async () => {
 		const counts = [...doc.querySelectorAll(".dir-line-count")].map(
 			(t) => t.textContent,
 		);
-		expect(counts.sort()).toEqual(["1", "1", "3", "3"]);
+		expect(counts.sort()).toEqual(["1", "1", "1", "1", "1", "3", "3"]);
 	});
 
 	it("widens lines with the model count on a fixed, capped scale", () => {
@@ -216,6 +220,82 @@ describe("directory view", async () => {
 	});
 });
 
+describe("shared view", async () => {
+	const layout = await computeSharedLayout(graph);
+	const doc = new new Window().DOMParser().parseFromString(
+		renderSharedSvg(layout, exported),
+		"image/svg+xml",
+	);
+	const uses = computeEvidence(graph).crossDirectoryUse;
+
+	it("draws only models defined in one top-level directory and used from another", () => {
+		const expected = [...new Set(uses.map((u) => u.model))].sort();
+		expect(expected.length).toBeGreaterThan(1);
+		expect(layout.models.map((m) => m.id).sort()).toEqual(expected);
+		for (const m of graph.models.filter((x) => x.directory === "dir:"))
+			expect(expected).not.toContain(m.id);
+		expect(doc.querySelectorAll(".card.model").length).toBe(expected.length);
+	});
+
+	it("runs each line from its model's card to the box of the directory using it", () => {
+		expect(layout.lines.length).toBe(uses.length);
+		for (const l of layout.lines) {
+			const card = layout.models.find((m) => m.id === l.from);
+			const box = layout.directories.find((d) => d.id === l.to);
+			if (!card || !box) throw new Error(`missing end of ${l.id}`);
+			const start = l.points[0];
+			const end = l.points[l.points.length - 1];
+			expect(start.x, l.id).toBeCloseTo(card.x + card.width, 0);
+			expect(start.y, l.id).toBeGreaterThanOrEqual(card.y);
+			expect(start.y, l.id).toBeLessThanOrEqual(card.y + card.height);
+			const onSide =
+				Math.abs(end.x - box.x) < 1 ||
+				Math.abs(end.x - (box.x + box.width)) < 1;
+			expect(onSide, l.id).toBe(true);
+			expect(end.y, l.id).toBeGreaterThanOrEqual(box.y);
+			expect(end.y, l.id).toBeLessThanOrEqual(box.y + box.height);
+		}
+	});
+
+	it("keeps a line's count beside the line, in the same coordinates", () => {
+		for (const l of layout.lines) {
+			const { x, y, width, height } = l.labelBox;
+			const near = segments(l).some(([a, b]) => {
+				const dx = Math.max(
+					Math.min(a.x, b.x) - (x + width),
+					x - Math.max(a.x, b.x),
+					0,
+				);
+				const dy = Math.max(
+					Math.min(a.y, b.y) - (y + height),
+					y - Math.max(a.y, b.y),
+					0,
+				);
+				return Math.hypot(dx, dy) < 12;
+			});
+			expect(near, l.id).toBe(true);
+		}
+	});
+
+	it("never overlaps two lines", () => {
+		const overlaps = layout.lines.flatMap((a, i) =>
+			layout.lines.slice(i + 1).flatMap((b) => {
+				const shared = segments(a).flatMap((s) =>
+					segments(b).map((t) => collinearOverlap(s, t)),
+				);
+				return shared.some((length) => length > 0) ? [`${a.id} | ${b.id}`] : [];
+			}),
+		);
+		expect(overlaps).toEqual([]);
+	});
+
+	it("says so when nothing is shared", async () => {
+		const none = { ...graph, usages: [], relations: [] };
+		const svg = renderSharedSvg(await computeSharedLayout(none), exported);
+		expect(svg).toContain("No model defined in a top-level directory");
+	});
+});
+
 describe("index.html", async () => {
 	const layout = await computeLayout(graph);
 	const evidence = computeEvidence(graph);
@@ -225,6 +305,7 @@ describe("index.html", async () => {
 			graph,
 			evidence,
 			renderSvg(layout, exported),
+			"",
 			"",
 		);
 		expect(html).not.toMatch(/__TYPESET_\w+__/);
@@ -240,6 +321,7 @@ describe("index.html", async () => {
 			evil,
 			evidence,
 			renderSvg(layout, exported),
+			"",
 			"",
 		);
 		expect(html.split("</script>").length).toBe(2);
@@ -266,5 +348,6 @@ describe("generate", () => {
 		expect(read("index.html")).toMatch(/id="dir-canvas" hidden><svg /);
 		expect(read("index.html")).toContain('class="dir-box"');
 		expect(read("diagram.svg")).not.toContain('class="dir-box"');
+		expect(read("index.html")).toMatch(/id="shared-canvas" hidden><svg /);
 	});
 });

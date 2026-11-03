@@ -11,6 +11,7 @@ import {
 } from "./render/directories.js";
 import { buildHtml } from "./render/html.js";
 import { computeLayout } from "./render/layout.js";
+import { computeSharedLayout, renderSharedSvg } from "./render/shared.js";
 import { renderSvg } from "./render/svg.js";
 
 export interface Args {
@@ -97,14 +98,13 @@ export async function generate(
 	});
 	const evidence = computeEvidence(graph);
 	const layout = await computeLayout(graph);
-	const svg = renderSvg(
-		layout,
-		new Map(graph.models.map((m) => [m.id, m.exported])),
-	);
+	const exported = new Map(graph.models.map((m) => [m.id, m.exported]));
+	const svg = renderSvg(layout, exported);
 	const directoriesSvg = renderDirectorySvg(
 		await computeDirectoryLayout(graph),
 	);
-	const html = await buildHtml(graph, evidence, svg, directoriesSvg);
+	const sharedSvg = renderSharedSvg(await computeSharedLayout(graph), exported);
+	const html = await buildHtml(graph, evidence, svg, directoriesSvg, sharedSvg);
 
 	await mkdir(options.outDir, { recursive: true });
 	const out = (name: string): string => path.join(options.outDir, name);

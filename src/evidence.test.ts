@@ -156,6 +156,40 @@ describe("computeEvidence", () => {
 		]);
 	});
 
+	it("lists use across top-level directories, ignoring the root and a model's own directory", () => {
+		const shared = inDir(model("a/x/s.ts", "Shared", []), "dir:a/x");
+		const rootModel = inDir(model("r.ts", "Root", []), "dir:");
+		const user = inDir(model("b/c/u.ts", "User", []), "dir:b/c");
+		const local = inDir(model("a/l.ts", "Local", []), "dir:a");
+		const g = graph([shared, rootModel, user, local], {
+			relations: [
+				relation(user, shared, "one"),
+				relation(user, shared, "two"),
+				relation(local, shared, "sameDirectory"),
+				relation(rootModel, shared, "fromRoot"),
+				relation(user, rootModel, "toRoot"),
+			],
+			usages: [
+				usage(shared, "dir:b", ["b/1.ts"], 2),
+				usage(shared, "dir:", ["root.ts"]),
+				usage(shared, "dir:a", ["a/own.ts"]),
+				usage(rootModel, "dir:b", ["b/1.ts"]),
+			],
+		});
+		expect(computeEvidence(g).crossDirectoryUse).toEqual([
+			{
+				model: shared.id,
+				directory: "dir:b",
+				files: [{ file: "b/1.ts", count: 2 }],
+				references: [
+					{ model: user.id, member: "one" },
+					{ model: user.id, member: "two" },
+				],
+				users: 2,
+			},
+		]);
+	});
+
 	it("groups each top-level directory's outside models by where they're declared", () => {
 		const compiler1 = inDir(model("compiler/1.ts", "C1", []), "dir:compiler");
 		const compiler2 = inDir(model("compiler/2.ts", "C2", []), "dir:compiler");

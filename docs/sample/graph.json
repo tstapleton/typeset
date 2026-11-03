@@ -41,6 +41,14 @@
       "implementation": true
     },
     {
+      "path": "customers/customer-orders.model.ts",
+      "directory": "dir:customers",
+      "models": [
+        "model:customers/customer-orders.model.ts#CustomerOrders"
+      ],
+      "implementation": false
+    },
+    {
       "path": "customers/customer.model.ts",
       "directory": "dir:customers",
       "models": [
@@ -124,6 +132,61 @@
     }
   ],
   "models": [
+    {
+      "id": "model:customers/customer-orders.model.ts#CustomerOrders",
+      "name": "CustomerOrders",
+      "exported": true,
+      "directory": "dir:customers",
+      "file": "customers/customer-orders.model.ts",
+      "line": 3,
+      "source": "export interface CustomerOrders {\n  customerId: string;\n  filter: OrderFilter;\n  savedFilters: OrderFilter[];\n}",
+      "kind": "interface",
+      "typeParameters": [],
+      "extends": [],
+      "members": [
+        {
+          "name": "customerId",
+          "kind": "property",
+          "optional": false,
+          "readonly": false,
+          "type": "string",
+          "refs": [],
+          "external": []
+        },
+        {
+          "name": "filter",
+          "kind": "property",
+          "optional": false,
+          "readonly": false,
+          "type": "OrderFilter",
+          "refs": [
+            {
+              "target": "model:data-access/order-filter.ts#OrderFilter",
+              "text": "OrderFilter",
+              "via": []
+            }
+          ],
+          "external": []
+        },
+        {
+          "name": "savedFilters",
+          "kind": "property",
+          "optional": false,
+          "readonly": false,
+          "type": "OrderFilter[]",
+          "refs": [
+            {
+              "target": "model:data-access/order-filter.ts#OrderFilter",
+              "text": "OrderFilter",
+              "via": [
+                "array"
+              ]
+            }
+          ],
+          "external": []
+        }
+      ]
+    },
     {
       "id": "model:customers/customer.model.ts#Address",
       "name": "Address",
@@ -465,7 +528,7 @@
       "exported": false,
       "directory": "dir:order-detail",
       "file": "order-detail/order-detail.page.ts",
-      "line": 4,
+      "line": 6,
       "source": "interface LineView {\n  line: OrderLine;\n  total: Money;\n}",
       "kind": "interface",
       "typeParameters": [],
@@ -863,6 +926,24 @@
   ],
   "relations": [
     {
+      "id": "rel:model:customers/customer-orders.model.ts#CustomerOrders->model:data-access/order-filter.ts#OrderFilter@filter",
+      "from": "model:customers/customer-orders.model.ts#CustomerOrders",
+      "to": "model:data-access/order-filter.ts#OrderFilter",
+      "kind": "property",
+      "member": "filter",
+      "via": []
+    },
+    {
+      "id": "rel:model:customers/customer-orders.model.ts#CustomerOrders->model:data-access/order-filter.ts#OrderFilter@savedFilters",
+      "from": "model:customers/customer-orders.model.ts#CustomerOrders",
+      "to": "model:data-access/order-filter.ts#OrderFilter",
+      "kind": "property",
+      "member": "savedFilters",
+      "via": [
+        "array"
+      ]
+    },
+    {
       "id": "rel:model:customers/customer.model.ts#Customer->model:customers/customer.model.ts#Address@billing",
       "from": "model:customers/customer.model.ts#Customer",
       "to": "model:customers/customer.model.ts#Address",
@@ -1058,6 +1139,18 @@
       ]
     },
     {
+      "id": "use:model:customers/customer.model.ts#CustomerRef->dir:order-detail",
+      "model": "model:customers/customer.model.ts#CustomerRef",
+      "directory": "dir:order-detail",
+      "sites": [
+        {
+          "file": "order-detail/order-detail.page.ts",
+          "count": 1,
+          "via": "import"
+        }
+      ]
+    },
+    {
       "id": "use:model:data-access/order-filter.ts#OrderFilter->dir:data-access",
       "model": "model:data-access/order-filter.ts#OrderFilter",
       "directory": "dir:data-access",
@@ -1066,6 +1159,18 @@
           "file": "data-access/order-filter.ts",
           "count": 1,
           "via": "local"
+        }
+      ]
+    },
+    {
+      "id": "use:model:data-access/order-filter.ts#OrderFilter->dir:order-detail",
+      "model": "model:data-access/order-filter.ts#OrderFilter",
+      "directory": "dir:order-detail",
+      "sites": [
+        {
+          "file": "order-detail/order-detail.page.ts",
+          "count": 1,
+          "via": "import"
         }
       ]
     },

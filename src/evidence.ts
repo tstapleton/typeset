@@ -4,7 +4,9 @@
 // suggestions about what to do with the result.
 
 import {
+	type CrossDirectoryUse,
 	compareStrings,
+	crossDirectoryUse,
 	type DirectoryImports,
 	directoryImports,
 	type ModelGraph,
@@ -56,6 +58,8 @@ export interface Evidence {
 	mostShared: SharedModel[];
 	/** Top-level directories using models declared in other ones, highest total first. */
 	directoryImports: DirectoryImports[];
+	/** Models defined in one top-level directory and used from another, ignoring the root. */
+	crossDirectoryUse: CrossDirectoryUse[];
 }
 
 type Properties = Map<string, Map<string, PropertyOccurrence>>;
@@ -164,5 +168,6 @@ export function computeEvidence(graph: ModelGraph): Evidence {
 		unreferenced: unreferenced(graph),
 		mostShared: mostShared(graph),
 		directoryImports: directoryImports(graph),
+		crossDirectoryUse: crossDirectoryUse(graph),
 	};
 }

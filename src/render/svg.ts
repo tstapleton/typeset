@@ -94,7 +94,7 @@ function sharedPillSvg(card: Layout["models"][number]): string {
 	);
 }
 
-function modelCardSvg(
+export function modelCardSvg(
 	card: Layout["models"][number],
 	exported: boolean,
 ): string {
@@ -203,6 +203,13 @@ const MARKERS =
 	`<marker id="m-extends" viewBox="0 0 12 12" refX="11" refY="6" markerWidth="10" markerHeight="10" orient="auto-start-reverse"><path class="m-extends" d="M1 1L11 6L1 11z"/></marker>` +
 	`<marker id="m-usage" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path class="m-usage" d="M0 0L10 5L0 10z"/></marker>`;
 
+export function dirBoxSvg(d: Layout["directories"][number]): string {
+	return (
+		`<g class="dir d${d.depth}" data-dir="${esc(d.id)}"><rect x="${d.x}" y="${d.y}" width="${d.width}" height="${d.height}" rx="10"/>` +
+		`<text class="dir-label" x="${d.x + 14}" y="${d.y + 22}">${esc(d.label)}</text></g>`
+	);
+}
+
 /**
  * The whole diagram as one standalone SVG document. Styling is embedded, so
  * the same string works as `diagram.svg` and inlined in `index.html`.
@@ -211,13 +218,7 @@ export function renderSvg(
 	layout: Layout,
 	exportedById: ReadonlyMap<string, boolean>,
 ): string {
-	const dirs = layout.directories
-		.map(
-			(d) =>
-				`<g class="dir d${d.depth}" data-dir="${esc(d.id)}"><rect x="${d.x}" y="${d.y}" width="${d.width}" height="${d.height}" rx="10"/>` +
-				`<text class="dir-label" x="${d.x + 14}" y="${d.y + 22}">${esc(d.label)}</text></g>`,
-		)
-		.join("");
+	const dirs = layout.directories.map(dirBoxSvg).join("");
 	const edges = layout.edges.map(edgeSvg).join("");
 	const models = layout.models
 		.map((m) => modelCardSvg(m, exportedById.get(m.id) ?? true))

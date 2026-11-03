@@ -20,16 +20,19 @@ export interface DirectoryBox extends Box {
 	used: number;
 }
 
-export interface DirectoryLine {
+/** A line whose thickness and number show a count. */
+export interface WeightedLine {
+	count: number;
+	width: number;
+	points: Point[];
+	/** Where the count is drawn; ELK reserves the room for it. */
+	labelBox: Box;
+}
+
+export interface DirectoryLine extends WeightedLine {
 	id: string;
 	from: string;
 	to: string;
-	/** Distinct models `from` uses that are declared in `to`. */
-	models: number;
-	width: number;
-	points: Point[];
-	/** Where the model count is drawn; ELK reserves the room for it. */
-	labelBox: Box;
 }
 
 export interface DirectoryLayout {
@@ -51,8 +54,8 @@ const MAX_LINE_W = 12;
  * diagram's busiest line, so one model looks the same in every diagram. It grows
  * with the square root so a line of 25 doesn't dwarf everything else.
  */
-export function lineWidth(models: number): number {
-	return Math.min(MAX_LINE_W, Math.round(15 * Math.sqrt(models)) / 10);
+export function lineWidth(count: number): number {
+	return Math.min(MAX_LINE_W, Math.round(15 * Math.sqrt(count)) / 10);
 }
 
 const ROOT_OPTIONS = {
@@ -111,7 +114,7 @@ export async function computeDirectoryLayout(
 			id: `${d.directory}->${f.directory}`,
 			from: d.directory,
 			to: f.directory,
-			models: f.models.length,
+			count: f.models.length,
 		})),
 	);
 	pairs.sort((a, b) => compareStrings(a.id, b.id));
@@ -136,8 +139,8 @@ export async function computeDirectoryLayout(
 			targets: [p.to],
 			labels: [
 				{
-					text: String(p.models),
-					width: String(p.models).length * CHAR_W + 14,
+					text: String(p.count),
+					width: String(p.count).length * CHAR_W + 14,
 					height: LABEL_H,
 				},
 			],
@@ -164,7 +167,7 @@ export async function computeDirectoryLayout(
 			const label = edge?.labels?.[0];
 			return {
 				...p,
-				width: lineWidth(p.models),
+				width: lineWidth(p.count),
 				points: (edge?.sections ?? []).flatMap((s) => [
 					s.startPoint,
 					...(s.bendPoints ?? []),
@@ -186,7 +189,7 @@ export async function computeDirectoryLayout(
  * scaled SVG marker would be huge on a thick line, and a thick line's square
  * end would poke out past a marker's tip.
  */
-function arrowEnd(line: DirectoryLine): { points: Point[]; head: string } {
+function arrowEnd(line: WeightedLine): { points: Point[]; head: string } {
 	const tip = line.points[line.points.length - 1];
 	const before = line.points[line.points.length - 2];
 	const length = Math.hypot(tip.x - before.x, tip.y - before.y) || 1;
@@ -203,20 +206,31 @@ function arrowEnd(line: DirectoryLine): { points: Point[]; head: string } {
 	};
 }
 
-function lineSvg(line: DirectoryLine, labels: Map<string, string>): string {
+export function weightedLineSvg(
+	line: WeightedLine,
+	data: string,
+	tip: string,
+): string {
 	if (line.points.length < 2) return "";
 	const { points, head } = arrowEnd(line);
 	const d = pathD(points);
 	const { x, y, width, height } = line.labelBox;
-	const noun = line.models === 1 ? "model" : "models";
-	const tip = `${labels.get(line.from)} uses ${line.models} ${noun} from ${labels.get(line.to)}`;
 	return (
-		`<g class="dir-line" data-from="${esc(line.from)}" data-to="${esc(line.to)}"><title>${esc(tip)}</title>` +
+		`<g class="dir-line" ${data}><title>${esc(tip)}</title>` +
 		`<path class="dir-line-hit" d="${d}" stroke-width="${Math.max(14, line.width + 6)}"/>` +
 		`<path class="dir-line-stroke" d="${d}" stroke-width="${line.width}"/>` +
 		`<path class="dir-line-head" d="${head}"/>` +
 		`<rect class="dir-line-pill" x="${x}" y="${y}" width="${width}" height="${height}" rx="${height / 2}"/>` +
-		`<text class="dir-line-count" x="${x + width / 2}" y="${y + height / 2 + 4}" text-anchor="middle">${line.models}</text></g>`
+		`<text class="dir-line-count" x="${x + width / 2}" y="${y + height / 2 + 4}" text-anchor="middle">${line.count}</text></g>`
+	);
+}
+
+function lineSvg(line: DirectoryLine, labels: Map<string, string>): string {
+	const noun = line.count === 1 ? "model" : "models";
+	return weightedLineSvg(
+		line,
+		`data-from="${esc(line.from)}" data-to="${esc(line.to)}"`,
+		`${labels.get(line.from)} uses ${line.count} ${noun} from ${labels.get(line.to)}`,
 	);
 }
 

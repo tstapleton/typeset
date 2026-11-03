@@ -41,7 +41,7 @@
   #detail ul { list-style: none; display: flex; flex-direction: column; gap: 3px; }
   #diagram-area { flex: 1; position: relative; overflow: hidden; background: var(--bg); cursor: grab; }
   #diagram-area.panning { cursor: grabbing; }
-  #canvas, #dir-canvas { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
+  #canvas, #dir-canvas, #shared-canvas { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
   #zoom { position: absolute; right: 12px; top: 12px; display: flex; gap: 4px; z-index: 2; }
   #views { position: absolute; left: 12px; top: 12px; display: flex; gap: 4px; z-index: 2; }
   #views button { padding: 4px 10px; font-size: 11px; border-radius: 4px; border: 1px solid var(--border); background: var(--surface); color: var(--dim); cursor: pointer; }
@@ -58,6 +58,8 @@
   svg.hide-property .e-property, svg.hide-extends .e-extends, svg.hide-usage .e-usage { display: none; }
   svg.hide-usage .card.files { display: none; }
   svg.focus .dir-box:not(.on), svg.focus .dir-line:not(.on) { opacity: .18; }
+  svg.focus .dir.on > rect { stroke: var(--accent); stroke-width: 2; }
+  #shared-canvas .dir { cursor: pointer; }
 </style>
 </head>
 <body>
@@ -79,6 +81,10 @@
     <input type="search" id="search" placeholder="Model or property name" autocomplete="off" />
     <div class="dim" id="search-result" style="font-size:11px"></div>
   </div>
+  <div class="card" id="shared-legend" hidden>
+    <h2>Shared</h2>
+    <p class="dim" style="font-size:11px">Only models defined in a directory directly below the feature and used from another one. Each line runs from a model to a directory that uses it, and its number and thickness show how many files and models there use it. Subdirectories count as part of their top-level directory. Use within a model's own directory and anything at the feature root are left out. Where a line starts on a card doesn't refer to a particular row. Click a line, card or directory for details.</p>
+  </div>
   <div class="card" id="dir-legend" hidden>
     <h2>Directories</h2>
     <p class="dim" style="font-size:11px">One box per directory directly below the feature. A line means the code or models in one directory use models declared in another. Its number and thickness show how many distinct models. In each box, <em>defined</em> counts the models declared there, <em>shared</em> counts those used from another directory, and <em>external models used</em> counts the models it uses from other directories. Click a line or box for the list.</p>
@@ -97,9 +103,10 @@
   </div>
 </div>
 <div id="diagram-area">
-  <div id="views"><button type="button" data-view="models" class="active">Models</button><button type="button" data-view="directories">Directories</button></div>
+  <div id="views"><button type="button" data-view="models" class="active">Models</button><button type="button" data-view="shared">Shared</button><button type="button" data-view="directories">Directories</button></div>
   <div id="zoom"><button type="button" id="zoom-out">−</button><button type="button" id="zoom-in">+</button><button type="button" id="zoom-fit">Fit</button><button type="button" id="zoom-1">100%</button></div>
   <div id="canvas">__TYPESET_SVG__</div>
+  <div id="shared-canvas" hidden>__TYPESET_SHARED__</div>
   <div id="dir-canvas" hidden>__TYPESET_DIRECTORIES__</div>
 </div>
 <script>
@@ -191,7 +198,7 @@ function select(id, { scroll = true } = {}) {
   for (const c of $$('.card.selected', svg)) c.classList.remove('selected');
   selected = id;
   const detail = $('#detail');
-  if (!id) { selectDirectoryItem(null); detail.hidden = true; focusOn(null); history.replaceState(null, '', location.pathname + location.search + (currentView === 'directories' ? '#directories' : '')); return; }
+  if (!id) { selectDirectoryItem(null); selectSharedItem(null); detail.hidden = true; focusOn(null); history.replaceState(null, '', location.pathname + location.search + (currentView === 'models' ? '' : `#${currentView}`)); return; }
   const card = svg.querySelector(`.card[data-id="${CSS.escape(id)}"]`);
   card?.classList.add('selected');
   focusOn([id]);
@@ -320,9 +327,85 @@ document.addEventListener('click', (e) => {
   if (line) selectDirectoryItem({ from: line.dataset.lineFrom, to: line.dataset.lineTo });
 });
 
+// ─── Shared view ─────────────────────────────────────────────────
+const sharedSvg = $('#shared-canvas svg');
+const sharedUses = evidence.crossDirectoryUse;
+const topDir = (id) => id.split('/')[0];
+function focusShared(uses) {
+  for (const el of $$('.on', sharedSvg)) el.classList.remove('on');
+  sharedSvg.classList.toggle('focus', !!uses);
+  if (!uses) return;
+  const models = new Set(uses.map((u) => u.model));
+  const dirs = new Set(uses.map((u) => u.directory));
+  for (const c of $$('.card', sharedSvg)) if (models.has(c.dataset.id)) c.classList.add('on');
+  for (const d of $$('.dir', sharedSvg)) if (dirs.has(d.dataset.dir)) d.classList.add('on');
+  for (const l of $$('.dir-line', sharedSvg)) if (uses.some((u) => u.model === l.dataset.from && u.directory === l.dataset.to)) l.classList.add('on');
+}
+const sharedFor = (item) => {
+  if (item.line) return sharedUses.filter((u) => u.model === item.line.from && u.directory === item.line.to);
+  if (item.card) return sharedUses.filter((u) => u.model === item.card);
+  return sharedUses.filter((u) => u.directory === item.dir);
+};
+function renderSharedLineDetail(use) {
+  const refs = use.references.map((r) => `<li>${modelLink(r.model)}${r.member ? `.<code>${esc(r.member)}</code>` : ''}</li>`).join('');
+  const files = use.files.map((f) => `<li class="mono">${esc(f.file)} <span class="dim">×${f.count}</span></li>`).join('');
+  $('#detail').innerHTML = `
+    <h2>${modelLink(use.model)} used in ${esc(dirLabel(use.directory))}</h2>
+    <h3>By models (${new Set(use.references.map((r) => r.model)).size})</h3><ul>${refs || '<li class="dim">none</li>'}</ul>
+    <h3>By code (${use.files.length})</h3><ul>${files || '<li class="dim">none</li>'}</ul>
+    <p><a class="link" data-clear>Clear selection</a></p>`;
+}
+function renderSharedDirDetail(id) {
+  const used = sharedUses.filter((u) => u.directory === id);
+  const own = sharedUses.filter((u) => topDir(modelById.get(u.model).directory) === id);
+  const usedItems = used.map((u) => `<li>${modelLink(u.model)} <span class="dim">${esc(dirLabel(topDir(modelById.get(u.model).directory)))} · ${u.users}</span></li>`).join('');
+  const ownIds = [...new Set(own.map((u) => u.model))];
+  const ownItems = ownIds.map((m) => `<li>${modelLink(m)} <span class="dim">used in ${own.filter((u) => u.model === m).map((u) => esc(dirLabel(u.directory))).join(', ')}</span></li>`).join('');
+  $('#detail').innerHTML = `
+    <h2>${esc(dirLabel(id))}</h2>
+    <h3>Shares (${ownIds.length})</h3><ul>${ownItems || '<li class="dim">none</li>'}</ul>
+    <h3>Uses (${used.length})</h3><ul>${usedItems || '<li class="dim">none</li>'}</ul>
+    <p><a class="link" data-clear>Clear selection</a></p>`;
+}
+let sharedSelected = false;
+function selectSharedItem(item) {
+  sharedSelected = !!item;
+  if (!item) { focusShared(null); return; }
+  focusShared(sharedFor(item));
+  if (item.line) renderSharedLineDetail(sharedFor(item)[0]);
+  else if (item.card) renderModelDetail(item.card);
+  else renderSharedDirDetail(item.dir);
+  $('#detail').hidden = false;
+}
+/** What's under the pointer. A nested directory stands for its top-level directory; the root for nothing. */
+function sharedItemAt(target) {
+  const card = target.closest('.card');
+  if (card) return { card: card.dataset.id };
+  const line = target.closest('.dir-line');
+  if (line) return { line: { from: line.dataset.from, to: line.dataset.to } };
+  const dir = target.closest('.dir');
+  const top = dir ? topDir(dir.dataset.dir) : 'dir:';
+  return top === 'dir:' ? null : { dir: top };
+}
+sharedSvg.addEventListener('click', (e) => {
+  if (drag?.moved) return;
+  const tok = e.target.closest('.t-model');
+  if (tok) { setView('models'); select(tok.dataset.target); reveal(tok.dataset.target); return; }
+  const item = sharedItemAt(e.target);
+  if (item) selectSharedItem(item);
+  else select(null);
+});
+sharedSvg.addEventListener('mouseover', (e) => {
+  if (sharedSelected) return;
+  const item = sharedItemAt(e.target);
+  focusShared(item ? sharedFor(item) : null);
+});
+sharedSvg.addEventListener('mouseleave', () => { if (!sharedSelected) focusShared(null); });
+
 // ─── Views ─────────────────────────────────────────────────────
 const views = {
   models: { canvas: $('#canvas'), svg, saved: null },
+  shared: { canvas: $('#shared-canvas'), svg: sharedSvg, saved: null },
   directories: { canvas: $('#dir-canvas'), svg: dirSvg, saved: null },
 };
 let currentView = 'models';
@@ -335,6 +418,7 @@ function setView(name) {
   for (const [key, v] of Object.entries(views)) v.canvas.hidden = key !== name;
   for (const b of $$('#views button')) b.classList.toggle('active', b.dataset.view === name);
   $('#connections').hidden = name !== 'models';
+  $('#shared-legend').hidden = name !== 'shared';
   $('#dir-legend').hidden = name !== 'directories';
   canvas = next.canvas;
   svgW = +next.svg.getAttribute('width');
@@ -371,7 +455,7 @@ section('Not referenced inside the feature', evidence.unreferenced, (id) => `<li
 fitView();
 window.addEventListener('resize', () => { if (!selected) fitView(); });
 const initial = decodeURIComponent(location.hash.slice(1));
-if (initial === 'directories') setView('directories');
+if (views[initial]) setView(initial);
 else if (initial && (modelById.has(initial) || initial.startsWith('files:'))) { select(initial, { scroll: false }); reveal(initial); }
 </script>
 </body>

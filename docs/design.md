@@ -99,6 +99,12 @@ inlined as its own SVG, so the page still needs no layout engine. Line counts co
 (`1.5 × √models`, capped at 12), so widths compare across diagrams; a scale relative to the
 busiest line wouldn't. It's limited to top-level directories.
 
+The shared view (`src/render/shared.ts`) is a third inlined layout. Its lines end on a
+directory box instead of on a referencing card, because hiding every model that isn't
+shared would remove most of the lines that show the sharing (10 of 11 model references
+crossing directories in the fixture). The feature root is left out of it, and that also
+means no line targets a box containing its own card, which ELK can't route.
+
 ## Known limitations / next steps
 
 - **No base-vs-PR diff yet.** Next: run `extract` on both checkouts and diff the graphs
