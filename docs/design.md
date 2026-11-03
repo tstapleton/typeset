@@ -99,7 +99,6 @@ Layout specifics:
 - Classes are not models. Angular components and stores don't carry property types worth
   showing, but domain classes would; this could become an option.
 - Types declared inside functions are not collected.
-- `*.test.ts` is not excluded (only `*.spec.ts`, as specified for Angular).
 - Usages are counted by identifier references, not import statements, so an imported
   but unused model doesn't count. Namespace imports (`models.Order`) and barrels resolve
   to the real declaration.

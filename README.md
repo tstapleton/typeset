@@ -45,8 +45,9 @@ module specifier (`@angular/core`) instead of a resolved declaration.
 - **Definitions**: interfaces, type aliases and enums at the top level of each file (or
   inside a `namespace`), in every `.ts` file under the feature directory. Classes are not
   models (a property typed with a class shows the class as an outside name).
-- **Skipped**: `*.spec.ts`, `*.stories.ts`, `*.d.ts`, and directories named `integration`,
-  `fixtures` or `node_modules` anywhere below the feature directory.
+- **Skipped**: `*.spec.ts`, `*.test.ts`, `*.stories.ts`, `*.d.ts`, and directories named
+  `__fixtures__`, `__mocks__`, `diagnostics`, `fixtures`, `integration` or `node_modules`
+  anywhere below the feature directory.
 - **Model → model**: a property, method signature, `extends` clause or alias body that
   names another model in the tree. Edges leave from the row that holds the reference, and
   the detail panel shows how the reference is reached (`via array`, `via generic:Pick`, …).

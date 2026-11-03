@@ -33,8 +33,8 @@ Options:
   -h, --help           Show this help
 
 Outputs: <out-dir>/index.html, <out-dir>/graph.json, <out-dir>/diagram.svg
-Skipped: *.spec.ts, *.stories.ts, *.d.ts, and directories named integration,
-fixtures or node_modules.`;
+Skipped: *.spec.ts, *.test.ts, *.stories.ts, *.d.ts, and directories named
+__fixtures__, __mocks__, diagnostics, fixtures, integration or node_modules.`;
 
 function flagValue(argv: string[], i: number, flag: string): string {
 	const v = argv[i];

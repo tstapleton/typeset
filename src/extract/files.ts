@@ -5,9 +5,16 @@ import { compareStrings } from "../graph.js";
 // Directory names excluded anywhere below the feature directory. The check is
 // on path segments relative to the feature directory, so a feature that itself
 // lives under e.g. `fixtures/` is still analyzed.
-const EXCLUDED_DIRS = new Set(["integration", "fixtures", "node_modules"]);
+const EXCLUDED_DIRS = new Set([
+	"__fixtures__",
+	"__mocks__",
+	"diagnostics",
+	"fixtures",
+	"integration",
+	"node_modules",
+]);
 
-const EXCLUDED_SUFFIXES = [".spec.ts", ".stories.ts", ".d.ts"];
+const EXCLUDED_SUFFIXES = [".spec.ts", ".test.ts", ".stories.ts", ".d.ts"];
 
 function isExcludedFile(name: string): boolean {
 	return (

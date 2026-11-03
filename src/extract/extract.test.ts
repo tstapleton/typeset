@@ -25,21 +25,31 @@ describe("extract: fixture feature", () => {
 		expect(graph.schemaVersion).toBe(1);
 	});
 
-	it("skips spec, stories, integration/ and fixtures/ (but not an ancestor named fixtures)", () => {
+	it("skips test files and test-support directories (but not an ancestor named fixtures)", () => {
 		const names = graph.models.map((m) => m.name);
 		for (const excluded of [
 			"SpecOnly",
 			"StoryArgs",
 			"IntegrationOnly",
 			"FixtureOnly",
+			"TestOnly",
+			"UnderscoreFixtureOnly",
+			"MockOnly",
+			"DiagnosticOnly",
 		]) {
 			expect(names).not.toContain(excluded);
 		}
 		expect(graph.files.map((f) => f.path)).not.toContain(
 			"data-access/orders.store.spec.ts",
 		);
-		expect(graph.directories.map((d) => d.path)).not.toContain("integration");
-		expect(graph.directories.map((d) => d.path)).not.toContain("fixtures");
+		for (const excluded of [
+			"integration",
+			"fixtures",
+			"__fixtures__",
+			"__mocks__",
+			"diagnostics",
+		])
+			expect(graph.directories.map((d) => d.path)).not.toContain(excluded);
 	});
 
 	it("keeps models at the feature root and the nested directory structure", () => {
